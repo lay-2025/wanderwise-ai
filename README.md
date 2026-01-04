@@ -1,10 +1,10 @@
-# Travel Chat Assistant
+# WanderWise AI
 
 Python習得とポートフォリオ作成を目的とした、旅行関連のAIチャットボットプロジェクト
 
 ## 🎯 プロジェクト概要
 
-**Travel Chat Assistant** は、ユーザーのチャットを通じて旅行データを収集し、LLMの学習過程を可視化するインタラクティブな学習プラットフォームです。
+**WanderWise AI** は、ユーザーのチャットを通じて旅行データを収集し、LLMの学習過程を可視化するインタラクティブな学習プラットフォームです。
 
 ### メイン機能
 1. **🤖 チャットを通じた旅行データ収集**
@@ -203,7 +203,7 @@ npm start
 ## 📁 プロジェクト構造
 
 ```
-Python_Travel/
+wanderwise-ai/
 ├── backend/
 │   ├── app/
 │   │   ├── api/
