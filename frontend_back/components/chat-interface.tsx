@@ -1,12 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import { Brain, Send, Sparkles, User, Bot } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
 interface Message {
   id: string
@@ -26,6 +28,13 @@ export function ChatInterface() {
   ])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight
+    }
+  }, [messages])
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return
@@ -41,17 +50,32 @@ export function ChatInterface() {
     setInput("")
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: userMessage.content }),
+      })
+      if (!res.ok) throw new Error(`HTTP error: ${res.status}`)
+      const data = await res.json()
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: "興味深いですね！そちらの観光スポットや体験について、もう少し詳しく教えていただけますか？",
+        content: data.response,
         timestamp: new Date(),
       }
       setMessages((prev) => [...prev, assistantMessage])
+    } catch (e) {
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: "申し訳ありません。エラーが発生しました。しばらくしてからもう一度お試しください。",
+        timestamp: new Date(),
+      }
+      setMessages((prev) => [...prev, errorMessage])
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
   return (
@@ -78,7 +102,7 @@ export function ChatInterface() {
       </header>
 
       {/* Chat Messages */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1" ref={scrollAreaRef}>
         <div className="container mx-auto max-w-4xl px-4 py-8">
           <div className="space-y-6">
             {messages.map((message) => (

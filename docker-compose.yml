@@ -14,9 +14,11 @@ services:
       - DATABASE_URL=postgresql://travel_user:travel_pass@postgres:5432/travel_db
       - CHROMA_SERVER_HOST=chromadb
       - CHROMA_SERVER_HTTP_PORT=8000
+      - OLLAMA_BASE_URL=http://ollama:11434
     depends_on:
       - postgres
       - chromadb
+      - ollama
     restart: always
 
   # frontend:
@@ -53,6 +55,23 @@ services:
       - chromadb_data:/chroma/chroma
     restart: always
 
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: always
+    # GPU使用時は以下のコメントを解除してください
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
 volumes:
   postgres_data:
   chromadb_data:
+  ollama_data:
