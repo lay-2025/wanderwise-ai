@@ -3,6 +3,7 @@ uvicorn
 pydantic
 pydantic-settings
 sqlalchemy
+alembic
 psycopg2-binary
 langchain
 langchain-ollama
