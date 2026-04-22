@@ -70,4 +70,4 @@ logs/
 .playwright-mcp/
 
 ## docs
-docs/
+docs/private/
