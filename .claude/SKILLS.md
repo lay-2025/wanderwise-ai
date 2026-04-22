@@ -62,6 +62,22 @@
 
 ---
 
+## テスト
+
+### `pytest-coverage`
+- **発動**: `/pytest-coverage` で明示指定
+- **概要**: GitHub 公式リポジトリ発の pytest ベストプラクティス・カバレッジガイド
+- **カバー範囲**:
+  - ユニットテスト・統合テストの設計
+  - フィクスチャ（`conftest.py`）の活用
+  - `unittest.mock` / `pytest-mock` によるモック
+  - FastAPI `TestClient` を使った API テスト
+  - カバレッジ計測（`pytest-cov`）
+- **インストール先**: プロジェクトローカル（`.agents/skills/pytest-coverage`）
+- **出典**: [github/awesome-copilot](https://skills.sh/github/awesome-copilot/pytest-coverage)
+
+---
+
 ## AI / RAG
 
 ### `rag-implementation`
@@ -94,6 +110,7 @@
 | `vercel-ai-sdk` | チャット・ストリーミング実装時 | `/vercel-ai-sdk` | プロジェクト |
 | `fastapi` | FastAPI コード作業時 | `/fastapi` | プロジェクト |
 | `architecture-patterns` | アーキテクチャ設計・リファクタリング時 | `/architecture-patterns` | プロジェクト |
+| `pytest-coverage` | なし | `/pytest-coverage` | プロジェクト |
 | `rag-implementation` | なし | `/rag-implementation` | プロジェクト |
 | `find-skills` | なし | `/find-skills` | プロジェクト |
 
