@@ -19,6 +19,16 @@
         "@upstash/context7-mcp"
       ],
       "env": {}
+    },
+    "postgres": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://travel_user:travel_pass@localhost:5432/travel_db"
+      ],
+      "env": {}
     }
   }
 }
