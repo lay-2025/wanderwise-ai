@@ -1,0 +1,7 @@
+# 開発・テスト用依存関係（本番環境には不要）
+-r requirements.txt
+
+pytest
+pytest-cov
+pytest-mock
+httpx
