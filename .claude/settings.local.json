@@ -1,11 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx skills *)"
+      "Bash(npx skills *)",
+      "Bash(docker compose *)"
     ]
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "playwright"
-  ],
-  "enableAllProjectMcpServers": true
+  ]
 }

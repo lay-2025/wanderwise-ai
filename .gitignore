@@ -55,6 +55,12 @@ Thumbs.db
 *.log
 logs/
 
+# pytest カバレッジ出力
+backend/cov_annotate/
+backend/.coverage
+backend/htmlcov/
+backend/.pytest_cache/
+
 # Docker
 .dockerignore
 
