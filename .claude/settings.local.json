@@ -3,5 +3,9 @@
     "allow": [
       "Bash(npx skills *)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "playwright"
+  ],
+  "enableAllProjectMcpServers": true
 }
