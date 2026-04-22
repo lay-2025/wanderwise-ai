@@ -62,6 +62,21 @@
 
 ---
 
+## AI / RAG
+
+### `rag-implementation`
+- **発動**: `/rag-implementation` で明示指定
+- **概要**: ChromaDB + LangChain を使った RAG パイプラインの実装パターンガイド
+- **カバー範囲**:
+  - ドキュメントのチャンク分割戦略
+  - Embedding 生成と ChromaDB への保存
+  - 類似度検索とコンテキスト付与
+  - RAG を組み込んだチャットエンドポイントの設計
+- **インストール先**: プロジェクトローカル（`.agents/skills/rag-implementation`）
+- **出典**: [davila7/claude-code-templates](https://skills.sh/davila7/claude-code-templates/rag-implementation)
+
+---
+
 ## ユーティリティ
 
 ### `find-skills`
@@ -73,13 +88,14 @@
 
 ## 発動方法まとめ
 
-| スキル | 自動発動 | 手動呼び出し |
-|--------|----------|-------------|
-| `next-best-practices` | 常時（Next.js コード全般） | ― |
-| `vercel-ai-sdk` | チャット・ストリーミング実装時 | `/vercel-ai-sdk` |
-| `fastapi` | FastAPI コード作業時 | `/fastapi` |
-| `architecture-patterns` | アーキテクチャ設計・リファクタリング時 | `/architecture-patterns` |
-| `find-skills` | なし | `/find-skills` |
+| スキル | 自動発動 | 手動呼び出し | インストール先 |
+|--------|----------|-------------|---------------|
+| `next-best-practices` | 常時（Next.js コード全般） | ― | プロジェクト |
+| `vercel-ai-sdk` | チャット・ストリーミング実装時 | `/vercel-ai-sdk` | プロジェクト |
+| `fastapi` | FastAPI コード作業時 | `/fastapi` | プロジェクト |
+| `architecture-patterns` | アーキテクチャ設計・リファクタリング時 | `/architecture-patterns` | プロジェクト |
+| `rag-implementation` | なし | `/rag-implementation` | プロジェクト |
+| `find-skills` | なし | `/find-skills` | プロジェクト |
 
 ---
 

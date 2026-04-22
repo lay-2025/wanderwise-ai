@@ -21,6 +21,11 @@
       "sourceType": "github",
       "computedHash": "db85045827ebeb83ac8dbc992b69188755eeb74dcf01cbf5e694d58aa494a106"
     },
+    "rag-implementation": {
+      "source": "davila7/claude-code-templates",
+      "sourceType": "github",
+      "computedHash": "35a5805f00bdba6fd87b53105fd75beef6dc129fcf02b6d724e024b6fa49c12f"
+    },
     "vercel-ai-sdk": {
       "source": "wsimmonds/claude-nextjs-skills",
       "sourceType": "github",
