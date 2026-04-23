@@ -1,5 +1,6 @@
+import uuid
 from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from langchain_ollama import ChatOllama
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -7,8 +8,8 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from app.core.config import settings
 from app.core.database import get_db
 from app.models import TravelExtraction
-from app.schemas.chat import ChatRequest, ChatResponse, ExtractionResult
-from app.services.chat_service import get_or_create_session, save_message
+from app.schemas.chat import ChatRequest, ChatResponse, ExtractionResult, HistoryResponse, MessageResponse
+from app.services.chat_service import get_or_create_session, save_message, get_session_history
 from app.services.extraction_service import extract_travel_data
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -65,5 +66,30 @@ def chat(request: ChatRequest, db: DbDep) -> ChatResponse:
             session_id=session.id,
             extractions=saved_extractions,
         )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/history", response_model=HistoryResponse)
+def get_history(
+    db: DbDep,
+    session_id: uuid.UUID = Query(..., description="取得対象のセッションID"),
+    limit: int = Query(50, ge=1, le=100, description="取得件数（1〜100）"),
+    offset: int = Query(0, ge=0, description="スキップ件数"),
+) -> HistoryResponse:
+    try:
+        session, messages, total = get_session_history(db, session_id, limit, offset)
+        if session is None:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return HistoryResponse(
+            session_id=session.id,
+            title=session.title,
+            messages=[MessageResponse.model_validate(m) for m in messages],
+            total=total,
+            limit=limit,
+            offset=offset,
+        )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

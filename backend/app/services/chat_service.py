@@ -21,3 +21,24 @@ def save_message(db: Session, session_id: uuid.UUID, role: str, content: str) ->
     db.commit()
     db.refresh(message)
     return message
+
+
+def get_session_history(
+    db: Session,
+    session_id: uuid.UUID,
+    limit: int,
+    offset: int,
+) -> tuple[ChatSession | None, list[Message], int]:
+    session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
+    if session is None:
+        return None, [], 0
+    total = db.query(Message).filter(Message.session_id == session_id).count()
+    messages = (
+        db.query(Message)
+        .filter(Message.session_id == session_id)
+        .order_by(Message.created_at.asc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    return session, messages, total
