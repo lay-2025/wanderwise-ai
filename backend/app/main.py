@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import chat, data
+from app.routers import chat, data, learning
 
 app = FastAPI(title="WanderWise AI API")
 
@@ -15,6 +15,7 @@ app.add_middleware(
 
 app.include_router(chat.router, prefix="/api")
 app.include_router(data.router, prefix="/api")
+app.include_router(learning.router, prefix="/api")
 
 @app.get("/")
 def read_root():
