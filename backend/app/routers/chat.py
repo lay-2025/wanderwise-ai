@@ -7,13 +7,14 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.security import get_current_user
 from app.models import TravelExtraction
 from app.schemas.chat import ChatRequest, ChatResponse, ExtractionResult, HistoryResponse, MessageResponse
 from app.services.chat_service import get_or_create_session, save_message, get_session_history
 from app.services.extraction_service import extract_travel_data
 from app.services.rag_service import build_rag_context
 
-router = APIRouter(prefix="/chat", tags=["chat"])
+router = APIRouter(prefix="/chat", tags=["chat"], dependencies=[Depends(get_current_user)])
 
 DbDep = Annotated[Session, Depends(get_db)]
 

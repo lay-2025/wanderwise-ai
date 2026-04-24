@@ -4,12 +4,13 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.security import get_current_user
 from app.schemas.learning import VectorizeResponse, SearchResponse, VisualizeResponse
 from app.services.vectorize_service import vectorize_chat_data
 from app.services.search_service import search_similar_chunks
 from app.services.visualize_service import get_visualize_data
 
-router = APIRouter(prefix="/learning", tags=["learning"])
+router = APIRouter(prefix="/learning", tags=["learning"], dependencies=[Depends(get_current_user)])
 
 DbDep = Annotated[Session, Depends(get_db)]
 
