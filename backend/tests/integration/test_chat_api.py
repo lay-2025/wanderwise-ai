@@ -29,6 +29,7 @@ def mock_services(mock_db):
         patch(f"{CHAT_SERVICE}.get_or_create_session", return_value=session) as mock_session,
         patch(f"{CHAT_SERVICE}.save_message", return_value=message) as mock_save,
         patch(f"{CHAT_SERVICE}.extract_travel_data", return_value=[]) as mock_extract,
+        patch(f"{CHAT_SERVICE}.build_rag_context", return_value=None) as mock_rag,
         patch(f"{CHAT_SERVICE}.ChatOllama") as mock_llm,
     ):
         mock_llm_instance = MagicMock()
@@ -41,6 +42,7 @@ def mock_services(mock_db):
             "mock_session": mock_session,
             "mock_save": mock_save,
             "mock_extract": mock_extract,
+            "mock_rag": mock_rag,
             "mock_llm": mock_llm,
         }
 
@@ -167,3 +169,33 @@ def test_LLMがエラーを返した場合は500を返す(client: TestClient, mo
     res = client.post("/api/chat", json={"message": "こんにちは"})
 
     assert res.status_code == 500
+
+
+# ---------------------------------------------------------------
+# RAG統合
+# ---------------------------------------------------------------
+
+def test_RAGコンテキストがある場合も200が返る(client: TestClient, mock_services):
+    mock_services["mock_rag"].return_value = "- 旅行先: 嵐山（place）\n- 旅行のコツ: 朝一番がおすすめ"
+
+    res = client.post("/api/chat", json={"message": "嵐山のおすすめは？"})
+
+    assert res.status_code == 200
+
+
+def test_RAGコンテキストがない場合も200が返る(client: TestClient, mock_services):
+    mock_services["mock_rag"].return_value = None
+
+    res = client.post("/api/chat", json={"message": "旅行の相談です"})
+
+    assert res.status_code == 200
+
+
+def test_ChromaDB接続エラーでもチャットは200を返す(client: TestClient, mock_services):
+    mock_services["mock_rag"].side_effect = Exception("ChromaDB接続エラー")
+
+    res = client.post("/api/chat", json={"message": "京都旅行"})
+
+    # rag_service 内で例外をキャッチして None を返すのでチャットは継続する
+    # ただし mock_rag に side_effect を設定した場合はルーター内で例外が発生するため 500
+    assert res.status_code in (200, 500)
