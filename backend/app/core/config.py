@@ -7,6 +7,10 @@ class Settings(BaseSettings):
     chroma_server_host: str = "localhost"
     chroma_server_http_port: int = 8001
 
+    jwt_secret_key: str = "changeme-use-strong-secret-in-production"
+    jwt_algorithm: str = "HS256"
+    jwt_expire_days: int = 30
+
     class Config:
         env_file = ".env"
 

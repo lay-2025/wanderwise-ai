@@ -10,3 +10,6 @@ langchain-ollama
 langchain-core
 chromadb
 python-dotenv
+python-jose[cryptography]
+passlib[bcrypt]
+email-validator
