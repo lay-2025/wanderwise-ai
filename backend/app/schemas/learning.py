@@ -1,6 +1,21 @@
 from pydantic import BaseModel
 
 
+class DocumentStats(BaseModel):
+    total: int
+    vectorized: int
+    processing: int
+    failed: int
+    pending: int
+
+
+class VisualizeResponse(BaseModel):
+    total_chunks: int
+    by_category: dict[str, int]
+    by_source: dict[str, int]
+    documents: DocumentStats
+
+
 class VectorizeResponse(BaseModel):
     processed: int
     skipped: int
