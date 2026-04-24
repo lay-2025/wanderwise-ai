@@ -11,5 +11,8 @@ langchain-core
 chromadb
 python-dotenv
 python-jose[cryptography]
-passlib[bcrypt]
+passlib[argon2]
+argon2-cffi
 email-validator
+pytest
+pytest-cov

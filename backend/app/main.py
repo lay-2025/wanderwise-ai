@@ -2,7 +2,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import auth, chat, data, learning
 
-app = FastAPI(title="WanderWise AI API")
+app = FastAPI(
+    title="WanderWise AI API",
+    swagger_ui_parameters={"withCredentials": True},
+)
 
 # Configure CORS for frontend access
 app.add_middleware(

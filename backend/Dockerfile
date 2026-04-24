@@ -10,7 +10,7 @@ ENV PYTHONUNBUFFERED 1
 
 # システム依存関係のインストール (PostgreSQLクライアント等)
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends gcc libpq-dev \
+    && apt-get install -y --no-install-recommends gcc g++ libpq-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.models import User
 
-_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+_pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 
 def hash_password(password: str) -> str:
