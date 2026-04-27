@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.conftest import make_mock_session
+from tests.conftest import make_mock_session, MOCK_USER_ID
 
 HISTORY_SERVICE = "app.routers.chat"
 
@@ -229,3 +229,29 @@ def test_DBエラー発生時に500が返る(client: TestClient, session_id):
         res = client.get(f"/api/chat/history?session_id={session_id}")
 
     assert res.status_code == 500
+
+
+# ---------------------------------------------------------------
+# 異常系 — 403 所有者チェック
+# ---------------------------------------------------------------
+
+def test_他ユーザーのセッションへのアクセスで403が返る(client: TestClient, session_id):
+    other_user_id = uuid.uuid4()  # MOCK_USER_ID とは異なる UUID
+    session = make_mock_session(session_id, user_id=other_user_id)
+    session.title = None
+
+    with patch(f"{HISTORY_SERVICE}.get_session_history", return_value=(session, [], 0)):
+        res = client.get(f"/api/chat/history?session_id={session_id}")
+
+    assert res.status_code == 403
+    assert res.json()["detail"] == "アクセス権限がありません"
+
+
+def test_自分のセッションへのアクセスで200が返る(client: TestClient, session_id):
+    session = make_mock_session(session_id, user_id=MOCK_USER_ID)
+    session.title = None
+
+    with patch(f"{HISTORY_SERVICE}.get_session_history", return_value=(session, [], 0)):
+        res = client.get(f"/api/chat/history?session_id={session_id}")
+
+    assert res.status_code == 200

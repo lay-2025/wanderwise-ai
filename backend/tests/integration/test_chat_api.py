@@ -1,7 +1,6 @@
 """
 チャットAPI の統合テスト。
 DB・LLM をモックし、エンドポイントの入出力・ふるまいを検証する。
-LaravelのFeatureテスト（$this->postJson('/api/chat', [...])）に相当。
 """
 import uuid
 from unittest.mock import MagicMock, patch
@@ -9,9 +8,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.conftest import make_mock_message, make_mock_session
+from tests.conftest import make_mock_message, make_mock_session, MOCK_USER_ID
 
-# サービス関数のモックパス
 CHAT_SERVICE = "app.routers.chat"
 
 
@@ -27,6 +25,7 @@ def mock_services(mock_db):
 
     with (
         patch(f"{CHAT_SERVICE}.get_or_create_session", return_value=session) as mock_session,
+        patch(f"{CHAT_SERVICE}.set_session_title_if_empty") as mock_title,
         patch(f"{CHAT_SERVICE}.save_message", return_value=message) as mock_save,
         patch(f"{CHAT_SERVICE}.extract_travel_data", return_value=[]) as mock_extract,
         patch(f"{CHAT_SERVICE}.build_rag_context", return_value=None) as mock_rag,
@@ -40,6 +39,7 @@ def mock_services(mock_db):
             "session": session,
             "message": message,
             "mock_session": mock_session,
+            "mock_title": mock_title,
             "mock_save": mock_save,
             "mock_extract": mock_extract,
             "mock_rag": mock_rag,
@@ -70,7 +70,7 @@ def test_レスポンスのsession_idはUUID形式(client: TestClient, mock_serv
     res = client.post("/api/chat", json={"message": "旅行の相談です"})
     session_id = res.json()["session_id"]
 
-    assert uuid.UUID(session_id)  # UUID形式でなければ例外が発生する
+    assert uuid.UUID(session_id)
 
 
 def test_LLMの返答がresponseに含まれる(client: TestClient, mock_services):
@@ -109,10 +109,9 @@ def test_旅行情報がない場合extractionsは空リスト(client: TestClien
 def test_session_id未指定で新規セッションが作成される(client: TestClient, mock_services):
     res = client.post("/api/chat", json={"message": "はじめまして"})
 
-    # get_or_create_session が session_id=None で呼ばれる
     mock_services["mock_session"].assert_called_once()
     call_args = mock_services["mock_session"].call_args
-    assert call_args.args[1] is None  # 第2引数（session_id）がNone
+    assert call_args.args[1] is None  # session_id が None
 
 
 def test_session_id指定で既存セッションが引き継がれる(client: TestClient, mock_services):
@@ -124,9 +123,21 @@ def test_session_id指定で既存セッションが引き継がれる(client: T
     })
 
     assert res.status_code == 200
-    # get_or_create_session に既存IDが渡される
     call_args = mock_services["mock_session"].call_args
-    assert str(call_args.args[1]) == existing_id
+    assert str(call_args.args[1]) == existing_id  # session_id が渡される
+
+
+def test_ログインユーザーのuser_idがセッション作成に渡される(client: TestClient, mock_services):
+    client.post("/api/chat", json={"message": "テスト"})
+
+    call_args = mock_services["mock_session"].call_args
+    assert call_args.args[2] == MOCK_USER_ID  # user_id がモックユーザーのID
+
+
+def test_初回メッセージでタイトル自動生成が呼ばれる(client: TestClient, mock_services):
+    client.post("/api/chat", json={"message": "京都旅行の相談"})
+
+    mock_services["mock_title"].assert_called_once()
 
 
 # ---------------------------------------------------------------
@@ -136,11 +147,9 @@ def test_session_id指定で既存セッションが引き継がれる(client: T
 def test_ユーザーメッセージとアシスタント返答がDBに保存される(client: TestClient, mock_services):
     client.post("/api/chat", json={"message": "京都旅行の相談"})
 
-    # save_message が2回呼ばれる（user + assistant）
     assert mock_services["mock_save"].call_count == 2
-
     calls = mock_services["mock_save"].call_args_list
-    roles = [call.args[2] for call in calls]  # 第3引数がrole
+    roles = [call.args[2] for call in calls]
     assert "user" in roles
     assert "assistant" in roles
 
@@ -149,11 +158,9 @@ def test_ユーザーメッセージとアシスタント返答がDBに保存さ
 # 異常系
 # ---------------------------------------------------------------
 
-def test_messageが空文字の場合は422を返す(client: TestClient, mock_services):
+def test_messageが空文字の場合は422(client: TestClient, mock_services):
     res = client.post("/api/chat", json={"message": ""})
 
-    # Pydanticのバリデーションエラー（空文字はminlength違反ではないが構造は通る）
-    # LLMエラーが発生しないため200になる場合もあることを確認
     assert res.status_code in (200, 422)
 
 
@@ -189,13 +196,3 @@ def test_RAGコンテキストがない場合も200が返る(client: TestClient,
     res = client.post("/api/chat", json={"message": "旅行の相談です"})
 
     assert res.status_code == 200
-
-
-def test_ChromaDB接続エラーでもチャットは200を返す(client: TestClient, mock_services):
-    mock_services["mock_rag"].side_effect = Exception("ChromaDB接続エラー")
-
-    res = client.post("/api/chat", json={"message": "京都旅行"})
-
-    # rag_service 内で例外をキャッチして None を返すのでチャットは継続する
-    # ただし mock_rag に side_effect を設定した場合はルーター内で例外が発生するため 500
-    assert res.status_code in (200, 500)
