@@ -111,6 +111,8 @@ def vectorize_chat_data(
             content=full_content,
             source="chat",
             status="processing",
+            created_by_user_id=session.user_id,
+            source_session_id=session.id,
         )
         db.add(doc)
         db.commit()
@@ -142,6 +144,8 @@ def vectorize_chat_data(
                         "session_id": str(session.id),
                         "category": extractions[i].category,
                         "source": "chat",
+                        "created_by_user_id": str(session.user_id),
+                        "source_session_id": str(session.id),
                     }
                     for i in range(len(chunk_objs))
                 ],
