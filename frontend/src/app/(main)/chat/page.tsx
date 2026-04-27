@@ -44,6 +44,7 @@ export default function ChatPage() {
             const res = await fetch(`${API_BASE_URL}/api/chat`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
+                credentials: "include",
                 body: JSON.stringify({ message: userMessage.content }),
             });
             if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
