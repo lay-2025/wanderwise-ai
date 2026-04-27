@@ -7,8 +7,9 @@
 
 ## フロントエンド
 
-### `next-best-practices`
+### `next-best-practices` ⭐ 基本スキル
 - **発動**: 自動（`user-invocable: false`）— Next.js コードの作成・編集時に常時適用
+- **用途**: **実装全般の基準スキル**。他のフロントスキルより優先する
 - **概要**: Next.js App Router のベストプラクティス集
 - **カバー範囲**:
   - ファイル構成・ルートセグメント規約
@@ -17,6 +18,30 @@
   - メタデータ・エラーハンドリング・ルートハンドラー
   - 画像・フォント最適化、バンドル設定
 - **出典**: [vercel/nextjs-skills](https://skills.sh/vercel/nextjs-skills/next-best-practices)
+
+---
+
+### `web-design-guidelines` — リファクタリング・レビュー用
+- **発動**: `/web-design-guidelines` で明示指定
+- **用途**: **UI品質審査・リファクタリング時のみ使用**。通常の実装には使わない
+- **概要**: Vercel の Web UI ガイドラインに基づくデザイン・アクセシビリティ審査
+- **カバー範囲**:
+  - デザイン品質・一貫性のチェック
+  - アクセシビリティ（a11y）ガイドライン
+  - UX ベストプラクティス
+- **出典**: [vercel-labs/agent-skills](https://skills.sh/vercel-labs/agent-skills/web-design-guidelines)
+
+---
+
+### `vercel-composition-patterns` — リファクタリング用
+- **発動**: `/vercel-composition-patterns` で明示指定
+- **用途**: **コンポーネント設計のリファクタリング時のみ使用**。通常の実装には使わない
+- **概要**: React コンポーネントの合成パターン集（React 19 API 対応）
+- **カバー範囲**:
+  - コンポーネントアーキテクチャ・状態管理パターン
+  - Boolean prop 増殖の回避
+  - 10+ の名前付き合成パターン
+- **出典**: [vercel-labs/agent-skills](https://skills.sh/vercel-labs/agent-skills/vercel-composition-patterns)
 
 ---
 
@@ -104,15 +129,17 @@
 
 ## 発動方法まとめ
 
-| スキル | 自動発動 | 手動呼び出し | インストール先 |
-|--------|----------|-------------|---------------|
-| `next-best-practices` | 常時（Next.js コード全般） | ― | プロジェクト |
-| `vercel-ai-sdk` | チャット・ストリーミング実装時 | `/vercel-ai-sdk` | プロジェクト |
-| `fastapi` | FastAPI コード作業時 | `/fastapi` | プロジェクト |
-| `architecture-patterns` | アーキテクチャ設計・リファクタリング時 | `/architecture-patterns` | プロジェクト |
-| `pytest-coverage` | なし | `/pytest-coverage` | プロジェクト |
-| `rag-implementation` | なし | `/rag-implementation` | プロジェクト |
-| `find-skills` | なし | `/find-skills` | プロジェクト |
+| スキル | 自動発動 | 手動呼び出し | 用途 | インストール先 |
+|--------|----------|-------------|------|---------------|
+| `next-best-practices` | 常時（Next.js コード全般） | ― | **実装基準（優先）** | プロジェクト |
+| `vercel-ai-sdk` | チャット・ストリーミング実装時 | `/vercel-ai-sdk` | AI チャット UI 実装 | プロジェクト |
+| `web-design-guidelines` | なし | `/web-design-guidelines` | UI レビュー・リファクタリング | プロジェクト |
+| `vercel-composition-patterns` | なし | `/vercel-composition-patterns` | コンポーネント設計リファクタリング | プロジェクト |
+| `fastapi` | FastAPI コード作業時 | `/fastapi` | バックエンド実装 | プロジェクト |
+| `architecture-patterns` | アーキテクチャ設計・リファクタリング時 | `/architecture-patterns` | 設計・リファクタリング | プロジェクト |
+| `pytest-coverage` | なし | `/pytest-coverage` | テスト・カバレッジ | プロジェクト |
+| `rag-implementation` | なし | `/rag-implementation` | RAG パイプライン実装 | プロジェクト |
+| `find-skills` | なし | `/find-skills` | スキル検索 | プロジェクト |
 
 ---
 

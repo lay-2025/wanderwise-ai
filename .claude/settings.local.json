@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(npx skills *)",
-      "Bash(docker compose *)"
+      "Bash(docker compose *)",
+      "WebSearch"
     ]
   },
   "enableAllProjectMcpServers": true,
