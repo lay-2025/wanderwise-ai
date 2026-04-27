@@ -36,3 +36,31 @@ class HistoryResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class SessionItem(BaseModel):
+    id: uuid.UUID
+    title: str | None
+    created_at: datetime
+    updated_at: datetime
+    message_count: int
+
+    model_config = {"from_attributes": True}
+
+
+class SessionListResponse(BaseModel):
+    sessions: list[SessionItem]
+    total: int
+
+
+class SessionResponse(BaseModel):
+    id: uuid.UUID
+    title: str | None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class SessionUpdateRequest(BaseModel):
+    title: str

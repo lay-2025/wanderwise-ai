@@ -9,12 +9,21 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import get_current_user, CurrentUserDep
 from app.models import TravelExtraction
-from app.schemas.chat import ChatRequest, ChatResponse, ExtractionResult, HistoryResponse, MessageResponse
+from app.schemas.chat import (
+    ChatRequest, ChatResponse, ExtractionResult,
+    HistoryResponse, MessageResponse,
+    SessionItem, SessionListResponse, SessionResponse, SessionUpdateRequest,
+)
 from app.services.chat_service import (
     get_or_create_session,
     save_message,
     get_session_history,
     set_session_title_if_empty,
+    get_user_sessions,
+    create_empty_session,
+    update_session_title,
+    delete_session,
+    touch_session,
 )
 from app.services.extraction_service import extract_travel_data
 from app.services.rag_service import build_rag_context
@@ -87,7 +96,9 @@ def chat(request: ChatRequest, db: DbDep, current_user: CurrentUserDep) -> ChatR
                 confidence=item["confidence"],
             ))
             saved_extractions.append(ExtractionResult(**item))
-        db.commit()
+
+        # セッションの最終更新日時を更新（サイドバーの並び順に反映）
+        touch_session(db, session)
 
         return ChatResponse(
             response=assistant_content,
@@ -124,3 +135,48 @@ def get_history(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/sessions", response_model=SessionListResponse)
+def list_sessions(db: DbDep, current_user: CurrentUserDep) -> SessionListResponse:
+    results = get_user_sessions(db, current_user.id)
+    sessions = [
+        SessionItem(
+            id=s.id,
+            title=s.title,
+            created_at=s.created_at,
+            updated_at=s.updated_at,
+            message_count=count,
+        )
+        for s, count in results
+    ]
+    return SessionListResponse(sessions=sessions, total=len(sessions))
+
+
+@router.post("/sessions", response_model=SessionResponse, status_code=201)
+def new_session(db: DbDep, current_user: CurrentUserDep) -> SessionResponse:
+    session = create_empty_session(db, current_user.id)
+    return SessionResponse.model_validate(session)
+
+
+@router.patch("/sessions/{session_id}", response_model=SessionResponse)
+def rename_session(
+    session_id: uuid.UUID,
+    body: SessionUpdateRequest,
+    db: DbDep,
+    current_user: CurrentUserDep,
+) -> SessionResponse:
+    session = update_session_title(db, session_id, current_user.id, body.title)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return SessionResponse.model_validate(session)
+
+
+@router.delete("/sessions/{session_id}", status_code=204)
+def remove_session(
+    session_id: uuid.UUID,
+    db: DbDep,
+    current_user: CurrentUserDep,
+) -> None:
+    if not delete_session(db, session_id, current_user.id):
+        raise HTTPException(status_code=404, detail="Session not found")
