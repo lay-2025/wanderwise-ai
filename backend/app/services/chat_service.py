@@ -2,17 +2,33 @@ import uuid
 from sqlalchemy.orm import Session
 from app.models import ChatSession, Message
 
+_TITLE_MAX_LEN = 40
 
-def get_or_create_session(db: Session, session_id: uuid.UUID | None) -> ChatSession:
+
+def get_or_create_session(
+    db: Session,
+    session_id: uuid.UUID | None,
+    user_id: uuid.UUID,
+) -> ChatSession:
     if session_id:
-        session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
+        session = (
+            db.query(ChatSession)
+            .filter(ChatSession.id == session_id, ChatSession.user_id == user_id)
+            .first()
+        )
         if session:
             return session
-    session = ChatSession()
+    session = ChatSession(user_id=user_id)
     db.add(session)
     db.commit()
     db.refresh(session)
     return session
+
+
+def set_session_title_if_empty(db: Session, session: ChatSession, first_message: str) -> None:
+    if session.title is None:
+        session.title = first_message[:_TITLE_MAX_LEN]
+        db.commit()
 
 
 def save_message(db: Session, session_id: uuid.UUID, role: str, content: str) -> Message:

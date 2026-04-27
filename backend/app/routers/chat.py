@@ -7,10 +7,15 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, CurrentUserDep
 from app.models import TravelExtraction
 from app.schemas.chat import ChatRequest, ChatResponse, ExtractionResult, HistoryResponse, MessageResponse
-from app.services.chat_service import get_or_create_session, save_message, get_session_history
+from app.services.chat_service import (
+    get_or_create_session,
+    save_message,
+    get_session_history,
+    set_session_title_if_empty,
+)
 from app.services.extraction_service import extract_travel_data
 from app.services.rag_service import build_rag_context
 
@@ -37,13 +42,16 @@ _RAG_CONTEXT_SECTION = """
 
 
 @router.post("", response_model=ChatResponse)
-def chat(request: ChatRequest, db: DbDep) -> ChatResponse:
+def chat(request: ChatRequest, db: DbDep, current_user: CurrentUserDep) -> ChatResponse:
     try:
-        # セッション取得または新規作成
-        session = get_or_create_session(db, request.session_id)
+        # ログインユーザーのセッションを取得または新規作成
+        session = get_or_create_session(db, request.session_id, current_user.id)
 
         # ユーザーメッセージをDBに保存
         user_message = save_message(db, session.id, "user", request.message)
+
+        # 初回メッセージからセッションタイトルを自動生成
+        set_session_title_if_empty(db, session, request.message)
 
         # RAGコンテキストを取得（ChromaDBが空・接続不可の場合は None）
         rag_context = build_rag_context(
@@ -93,6 +101,7 @@ def chat(request: ChatRequest, db: DbDep) -> ChatResponse:
 @router.get("/history", response_model=HistoryResponse)
 def get_history(
     db: DbDep,
+    current_user: CurrentUserDep,
     session_id: uuid.UUID = Query(..., description="取得対象のセッションID"),
     limit: int = Query(50, ge=1, le=100, description="取得件数（1〜100）"),
     offset: int = Query(0, ge=0, description="スキップ件数"),
@@ -101,6 +110,8 @@ def get_history(
         session, messages, total = get_session_history(db, session_id, limit, offset)
         if session is None:
             raise HTTPException(status_code=404, detail="Session not found")
+        if session.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="アクセス権限がありません")
         return HistoryResponse(
             session_id=session.id,
             title=session.title,
