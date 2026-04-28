@@ -1,11 +1,16 @@
 # チャットAPI インターフェース設計書
 
+> 作成日: 2026-04-21  
+> ステータス: 実装済み
+
+---
+
 ## 概要
 
 | 項目 | 内容 |
 |------|------|
 | ベースURL | `http://localhost:8000` |
-| 認証 | なし（開発環境） |
+| 認証 | JWT Cookie 認証（必須） |
 | データ形式 | JSON |
 | 文字コード | UTF-8 |
 
@@ -18,6 +23,10 @@
 | 1 | GET | `/health` | ヘルスチェック |
 | 2 | POST | `/api/chat` | チャットメッセージ送受信・データ収集 |
 | 3 | GET | `/api/chat/history` | 会話履歴取得（→ [詳細](02_chat_history_api.md)） |
+| 4 | GET | `/api/chat/sessions` | セッション一覧取得（→ [詳細](07_sessions_api.md)） |
+| 5 | POST | `/api/chat/sessions` | 新規セッション作成（→ [詳細](07_sessions_api.md)） |
+| 6 | PATCH | `/api/chat/sessions/{id}` | セッション名称変更（→ [詳細](07_sessions_api.md)） |
+| 7 | DELETE | `/api/chat/sessions/{id}` | セッション削除（→ [詳細](07_sessions_api.md)） |
 
 ---
 
@@ -49,6 +58,8 @@ GET /health
 POST /api/chat
 Content-Type: application/json
 ```
+
+**認証:** JWT Cookie（`access_token`）が必要。未認証の場合は 401 を返す。
 
 **リクエストボディ**
 
@@ -106,16 +117,16 @@ Content-Type: application/json
 }
 ```
 
-**エラー時 (500 Internal Server Error)**
-
-| フィールド | 型 | 説明 |
-|------------|------|------|
-| `detail` | string | エラー内容 |
+**エラー時 (401 Unauthorized) — 未認証**
 
 ```json
-{
-  "detail": "エラーの詳細メッセージ"
-}
+{ "detail": "Not authenticated" }
+```
+
+**エラー時 (500 Internal Server Error)**
+
+```json
+{ "detail": "エラーの詳細メッセージ" }
 ```
 
 ---
@@ -144,19 +155,27 @@ Content-Type: application/json
     ▼
 FastAPI (backend:8000)
     │
-    ├─① セッション取得または新規作成（PostgreSQL: sessions）
+    ├─① Cookie から JWT を検証 → ログインユーザーを特定
     │
-    ├─② ユーザーメッセージを保存（PostgreSQL: messages）
+    ├─② セッション取得または新規作成（PostgreSQL: sessions）
     │
-    ├─③ LangChain ChatOllama で返答生成
+    ├─③ ユーザーメッセージを保存（PostgreSQL: messages）
+    │
+    ├─④ 初回メッセージからセッションタイトルを自動生成（40文字上限）
+    │
+    ├─⑤ ChromaDB から RAG コンテキストを取得（接続不可時はスキップ）
+    │
+    ├─⑥ LangChain ChatOllama で返答生成（RAG コンテキストをシステムプロンプトに付与）
     │       └─ Ollama (ollama:11434) / qwen2.5:3b
     │
-    ├─④ アシスタント返答を保存（PostgreSQL: messages）
+    ├─⑦ アシスタント返答を保存（PostgreSQL: messages）
     │
-    ├─⑤ ユーザーメッセージから旅行データを抽出
+    ├─⑧ ユーザーメッセージから旅行データを抽出
     │       └─ Ollama (ollama:11434) / qwen2.5:3b（JSON形式で抽出）
     │
-    ├─⑥ 抽出データを保存（PostgreSQL: travel_extractions）
+    ├─⑨ 抽出データを保存（PostgreSQL: travel_extractions）
+    │
+    ├─⑩ セッションの updated_at を更新（サイドバーの並び順に反映）
     │
     │ {"response": "...", "session_id": "...", "extractions": [...]}
     ▼
@@ -185,7 +204,7 @@ FastAPI (backend:8000)
 |------|----------|------|
 | チャット（推論） | `qwen2.5:3b` | Alibaba製。日本語対応 |
 | 旅行データ抽出 | `qwen2.5:3b` | 同モデルをJSON抽出プロンプトで流用 |
-| 埋め込み（RAG用） | `nomic-embed-text` | テキストのベクトル化（Step 2で実装予定） |
+| 埋め込み（RAG用） | `nomic-embed-text` | テキストのベクトル化 |
 
 ---
 
@@ -197,11 +216,15 @@ FastAPI (backend:8000)
 | `backend/app/schemas/chat.py` | リクエスト・レスポンスのPydanticスキーマ |
 | `backend/app/services/chat_service.py` | セッション・メッセージのDB操作 |
 | `backend/app/services/extraction_service.py` | 旅行データ抽出ロジック |
+| `backend/app/services/rag_service.py` | RAGコンテキスト構築 |
 | `backend/app/main.py` | FastAPIアプリのエントリポイント |
+
+---
 
 ## 変更履歴
 
 | 日付 | バージョン | 変更内容 |
 |------|-----------|----------|
+| 2026-04-28 | 1.2.0 | 認証要件を追加。処理フローに RAG・touch_session を追記。セッション管理エンドポイントをエンドポイント一覧に追加 |
 | 2026-04-22 | 1.1.0 | セッション管理・メッセージ保存・旅行データ抽出を追加 |
 | 2026-04-21 | 1.0.0 | 初版作成（チャット機能） |

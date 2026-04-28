@@ -11,7 +11,7 @@
 |---|---|
 | **エンドポイント** | `GET /api/chat/history` |
 | **機能** | 指定セッションの会話履歴（メッセージ一覧）を時系列で取得する |
-| **認証** | なし（開発フェーズ） |
+| **認証** | JWT Cookie 認証（必須） |
 
 ---
 
@@ -79,12 +79,22 @@ GET /api/chat/history?session_id=550e8400-e29b-41d4-a716-446655440000&limit=20&o
 
 ---
 
+### 401 Unauthorized — 未認証
+
+```json
+{ "detail": "Not authenticated" }
+```
+
+### 403 Forbidden — 他ユーザーのセッション
+
+```json
+{ "detail": "アクセス権限がありません" }
+```
+
 ### 404 Not Found — セッションが存在しない
 
 ```json
-{
-  "detail": "Session not found"
-}
+{ "detail": "Session not found" }
 ```
 
 ### 422 Unprocessable Entity — バリデーションエラー
@@ -126,16 +136,20 @@ GET /api/chat/history?session_id=550e8400-e29b-41d4-a716-446655440000&limit=20&o
 ## 処理フロー
 
 ```
-1. クエリパラメータのバリデーション（FastAPI / Pydantic）
+1. Cookie から JWT を検証 → ログインユーザーを特定
         ↓
-2. sessions テーブルから session_id で検索
+2. クエリパラメータのバリデーション（FastAPI / Pydantic）
+        ↓
+3. sessions テーブルから session_id で検索
         ↓（存在しない場合 → 404）
-3. messages テーブルから session_id でフィルタ
+4. session.user_id とログインユーザーの id を照合
+        ↓（不一致の場合 → 403）
+5. messages テーブルから session_id でフィルタ
    - 総件数を COUNT で取得（total）
    - created_at 昇順で ORDER BY
    - OFFSET / LIMIT でページング
         ↓
-4. HistoryResponse を返す
+6. HistoryResponse を返す
 ```
 
 ---
@@ -144,7 +158,7 @@ GET /api/chat/history?session_id=550e8400-e29b-41d4-a716-446655440000&limit=20&o
 
 ```sql
 -- セッション取得
-SELECT id, title, created_at, updated_at
+SELECT id, title, user_id, created_at, updated_at
 FROM sessions
 WHERE id = :session_id;
 
@@ -172,9 +186,20 @@ LIMIT :limit OFFSET :offset;
 | 5 | 正常系 | メッセージが `created_at` 昇順で返る | 最初のメッセージが最も古い |
 | 6 | 正常系 | レスポンスに `total/limit/offset` が含まれる | ページング情報が正しい |
 | 7 | 異常系 | 存在しない `session_id` を指定 | 404 |
-| 8 | 異常系 | `session_id` 未指定 | 422 |
-| 9 | 異常系 | `session_id` がUUID形式でない | 422 |
-| 10 | 異常系 | `limit=0`（範囲外） | 422 |
-| 11 | 異常系 | `limit=101`（範囲外） | 422 |
-| 12 | 異常系 | `offset=-1`（負の値） | 422 |
-| 13 | 異常系 | DBエラー発生 | 500 |
+| 8 | 異常系 | 他ユーザーの `session_id` を指定 | 403 |
+| 9 | 異常系 | `session_id` 未指定 | 422 |
+| 10 | 異常系 | `session_id` がUUID形式でない | 422 |
+| 11 | 異常系 | `limit=0`（範囲外） | 422 |
+| 12 | 異常系 | `limit=101`（範囲外） | 422 |
+| 13 | 異常系 | `offset=-1`（負の値） | 422 |
+| 14 | 異常系 | 未認証 | 401 |
+| 15 | 異常系 | DBエラー発生 | 500 |
+
+---
+
+## 変更履歴
+
+| 日付 | バージョン | 変更内容 |
+|---|---|---|
+| 2026-04-28 | 1.1.0 | JWT Cookie 認証を必須化。403（他ユーザーのセッション）を追加。処理フローに認証・所有者チェックを追記 |
+| 2026-04-23 | 1.0.0 | 初版作成 |
