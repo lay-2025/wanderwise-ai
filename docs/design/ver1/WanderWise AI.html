@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WanderWise AI</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300..700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  html, body, #root { height:100%; }
+  body { background:#0a0a0a; color:#ededed; font-family:'DM Sans',system-ui,sans-serif; -webkit-font-smoothing:antialiased; overflow:hidden; }
+  ::-webkit-scrollbar { width:4px; height:4px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
+  * { scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.1) transparent; }
+  button { cursor:pointer; border:none; background:none; font-family:inherit; color:inherit; }
+  input, textarea { font-family:inherit; }
+  @keyframes bounceY { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes pageIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes brainGlow { 0%,100%{box-shadow:0 0 20px rgba(37,99,235,0.4)} 50%{box-shadow:0 0 40px rgba(37,99,235,0.7)} }
+  @keyframes badgePop { 0%{opacity:0;transform:scale(0.7)} 60%{transform:scale(1.08)} 100%{opacity:1;transform:scale(1)} }
+  @keyframes slideIn { from{opacity:0;transform:translateX(12px)} to{opacity:1;transform:translateX(0)} }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  .page-enter { animation:pageIn 0.3s ease forwards; }
+  .msg-in { animation:fadeUp 0.25s ease forwards; }
+  .dot1 { animation:bounceY 1s infinite; animation-delay:-0.3s; }
+  .dot2 { animation:bounceY 1s infinite; animation-delay:-0.15s; }
+  .dot3 { animation:bounceY 1s infinite; }
+  .brain-glow { animation:brainGlow 3s ease-in-out infinite; }
+  .badge-pop { animation:badgePop 0.3s cubic-bezier(.34,1.56,.64,1) forwards; }
+  .panel-slide { animation:slideIn 0.25s ease forwards; }
+  .spin { animation:spin 1s linear infinite; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+/* ─── ICONS ───────────────────────────────────────────────── */
+const ICONS = {
+  brain:    {p:["M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.46 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.44-3.14Z","M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.46 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.44-3.14Z"]},
+  msg:      {p:["M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"]},
+  send:     {p:["M22 2 11 13","M22 2 15 22 11 13 2 9l20-7z"]},
+  chart:    {p:["M3 3v18h18","M18 17V9","M13 17V5","M8 17v-3"]},
+  db:       {p:["M21 5c0 1.66-4.03 3-9 3S3 6.66 3 5m18 0c0-1.66-4.03-3-9-3S3 3.34 3 5m18 0v14c0 1.66-4 3-9 3s-9-1.34-9-3V5m18 7c0 1.66-4 3-9 3s-9-1.34-9-3"]},
+  plus:     {p:["M12 5v14","M5 12h14"]},
+  trash:    {p:["M3 6h18","M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6","M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2","M10 11v6","M14 11v6"]},
+  pencil:   {p:["M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"]},
+  check:    {p:["M20 6 9 17 4 12"]},
+  xmark:    {p:["M18 6 6 18","M6 6l12 12"]},
+  logout:   {p:["M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4","M16 17l5-5-5-5","M21 12H9"]},
+  user:     {p:["M20 21a8 8 0 1 0-16 0"],c:[{cx:12,cy:8,r:4}]},
+  eye:      {p:["M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"],c:[{cx:12,cy:12,r:3}]},
+  eyeoff:   {p:["M9.88 9.88a3 3 0 1 0 4.24 4.24","M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68","M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61","M2 2l20 20"]},
+  upload:   {p:["M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4","M17 8l-5-5-5 5","M12 3v12"]},
+  search:   {p:["M21 21l-4.35-4.35"],c:[{cx:11,cy:11,r:8}]},
+  file:     {p:["M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z","M14 2v6h6","M16 13H8","M16 17H8","M10 9H8"]},
+  sparkle:  {p:["M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"]},
+  layers:   {p:["M12 2 2 7l10 5 10-5-10-5z","M2 17l10 5 10-5","M2 12l10 5 10-5"]},
+  zap:      {p:["M13 2 3 14h9l-1 8 10-12h-9l1-8z"]},
+  link:     {p:["M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71","M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"]},
+  toggle:   {p:["M16 5H8a7 7 0 0 0 0 14h8a7 7 0 0 0 0-14z"],c:[{cx:16,cy:12,r:3}]},
+  mappin:   {p:["M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"],c:[{cx:12,cy:10,r:3}]},
+  hotel:    {p:["M3 22V7l9-5 9 5v15H3z","M3 11h18","M9 22v-7h6v7"]},
+  train:    {p:["M4 11V8a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v3","M4 17V11h16v6","M4 17l-2 4h20l-2-4","M9 17v2","M15 17v2","M8 4v4","M16 4v4"]},
+  utensils: {p:["M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2","M7 2v20","M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"]},
+  star:     {p:["M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"]},
+  calendar: {p:["M8 2v4","M16 2v4","M3 10h18","M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"]},
+  wallet:   {p:["M21 12V7H5a2 2 0 0 1 0-4h14v4","M3 5v14a2 2 0 0 0 2 2h16v-5","M18 12a2 2 0 0 0 0 4h4v-4z"]},
+  info:     {p:["M12 16v-4","M12 8h.01"],c:[{cx:12,cy:12,r:10}]},
+  columns:  {p:["M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7m0-18H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7m0-18v18"]},
+  refresh:  {p:["M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8","M21 3v5h-5","M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16","M8 16H3v5"]},
+}
+const Icon = ({name, size=18, style:st={}}) => {
+  const d = ICONS[name]||{}
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={st}>
+      {(d.c||[]).map((p,i)=><circle key={i} {...p}/>)}
+      {(d.p||[]).map((p,i)=><path key={i} d={p}/>)}
+    </svg>
+  )
+}
+
+/* ─── COLORS ──────────────────────────────────────────────── */
+const C = {
+  bg:'#0a0a0a', card:'rgba(255,255,255,0.02)',
+  border:'rgba(255,255,255,0.07)', borderHover:'rgba(255,255,255,0.14)',
+  accent:'#2563eb', accentGlow:'rgba(37,99,235,0.35)',
+  textPrimary:'#ededed', textSec:'#94a3b8', textMuted:'#475569',
+}
+
+/* ─── EXTRACTION CATEGORIES ───────────────────────────────── */
+const CAT_META = {
+  destination:  { label:'旅行先',   icon:'mappin',   color:'#3b82f6', bg:'rgba(59,130,246,0.12)'  },
+  accommodation:{ label:'宿泊',     icon:'hotel',    color:'#8b5cf6', bg:'rgba(139,92,246,0.12)'  },
+  transportation:{ label:'交通',    icon:'train',    color:'#06b6d4', bg:'rgba(6,182,212,0.12)'   },
+  food:         { label:'グルメ',   icon:'utensils', color:'#f59e0b', bg:'rgba(245,158,11,0.12)'  },
+  experience:   { label:'体験',     icon:'star',     color:'#10b981', bg:'rgba(16,185,129,0.12)'  },
+  schedule:     { label:'日程',     icon:'calendar', color:'#ec4899', bg:'rgba(236,72,153,0.12)'  },
+  budget:       { label:'予算',     icon:'wallet',   color:'#f97316', bg:'rgba(249,115,22,0.12)'  },
+  tip:          { label:'コツ',     icon:'info',     color:'#a78bfa', bg:'rgba(167,139,250,0.12)' },
+}
+
+/* ─── MOCK DATA ───────────────────────────────────────────── */
+const T = Date.now()
+const SESSIONS_INIT = [
+  {id:'s1', title:'京都旅行の計画',    updated_at: new Date(T - 2*3600000)},
+  {id:'s2', title:'東京おすすめスポット', updated_at: new Date(T - 86400000)},
+  {id:'s3', title:'北海道の冬旅行',    updated_at: new Date(T - 86400000 - 3600000)},
+  {id:'s4', title:'バリ島リゾート情報', updated_at: new Date(T - 5*86400000)},
+  {id:'s5', title:'ヨーロッパ周遊プラン', updated_at: new Date(T - 25*86400000)},
+]
+
+/* 抽出データ（セッションごと） */
+const EXTRACTIONS_INIT = {
+  s1:[
+    {id:'e1', category:'destination',   data:{name:'京都', type:'city', country:'日本', region:'関西'}, confidence:0.97},
+    {id:'e2', category:'schedule',      data:{start:'2026-03-28', end:'2026-03-31', duration_days:4, season:'春'}, confidence:0.91},
+    {id:'e3', category:'experience',    data:{name:'円山公園花見', type:'activity', location:'京都'}, confidence:0.88},
+  ],
+  s2:[
+    {id:'e4', category:'destination',   data:{name:'東京', type:'city', country:'日本'}, confidence:0.99},
+    {id:'e5', category:'food',          data:{name:'寿司', type:'料理', location:'築地'}, confidence:0.84},
+    {id:'e6', category:'experience',    data:{name:'チームラボ', type:'art', location:'お台場'}, confidence:0.92},
+  ],
+  s3:[
+    {id:'e7', category:'destination',   data:{name:'北海道', type:'region', country:'日本'}, confidence:0.96},
+    {id:'e8', category:'accommodation', data:{name:'星野リゾート トマム', type:'hotel', location:'占冠'}, confidence:0.87},
+    {id:'e9', category:'transportation',data:{type:'飛行機', from:'東京', to:'新千歳', duration_minutes:90}, confidence:0.93},
+    {id:'e10',category:'tip',           data:{content:'2月の流氷ツアーは早めの予約が必須', target:'網走'}, confidence:0.85},
+  ],
+  s4:[],
+  s5:[
+    {id:'e11',category:'budget',        data:{amount:400000, currency:'JPY', type:'total'}, confidence:0.78},
+    {id:'e12',category:'destination',   data:{name:'パリ', type:'city', country:'フランス'}, confidence:0.99},
+    {id:'e13',category:'tip',           data:{content:'ミュージアムパスで美術館の待ち時間を大幅短縮できる', target:'パリ'}, confidence:0.91},
+  ],
+}
+
+const INIT_MSGS = {
+  s1:[
+    {role:'assistant', content:'こんにちは！旅行についてお話ししましょう。最近行った場所や、行きたい場所について教えてください。', time:'14:30', extractions:[]},
+    {role:'user',      content:'京都に行きたいと思っています。桜の季節に3泊4日で計画したいです。', time:'14:31', extractions:[]},
+    {role:'assistant', content:'素晴らしい選択です！京都の桜は3月下旬〜4月上旬が見頃です。\n\n特におすすめのスポット：\n• 円山公園 — 枝垂れ桜が圧巻\n• 哲学の道 — 約2kmの桜並木\n• 醍醐寺 — 豊臣秀吉も愛でた名所\n\n宿泊エリアはどのあたりをお考えですか？',
+      time:'14:31',
+      extractions:['e1','e2','e3'],
+    },
+  ],
+  s2:[
+    {role:'assistant', content:'こんにちは！旅行についてお話ししましょう。', time:'09:15', extractions:[]},
+    {role:'user',      content:'東京でおすすめのスポットを教えてください！', time:'09:16', extractions:[]},
+    {role:'assistant', content:'東京は見どころ満載ですね！\n\n🏛 文化・歴史 → 浅草・上野・築地\n🎨 アート → チームラボ・六本木\n🛍 ショッピング → 渋谷・原宿・銀座',
+      time:'09:16', extractions:['e4','e5','e6'],
+    },
+  ],
+}
+
+const AI_REPLIES_POOL = [
+  { content:'ありがとうございます！旅行先・日程・予算の情報を抽出し、RAGに登録しました。他に気になることはありますか？',
+    extractions_new:[
+      {category:'destination', data:{name:'仙台', type:'city', country:'日本', region:'東北'}, confidence:0.94},
+    ]
+  },
+  { content:'素晴らしいですね！現地のコツも収集しました。混雑を避けるための時間帯情報も登録済みです。',
+    extractions_new:[
+      {category:'tip', data:{content:'朝7時前は観光客が少なく写真も撮りやすい', target:'現地'}, confidence:0.88},
+    ]
+  },
+  { content:'予算感を教えていただきありがとうございます！宿泊・交通・食費の内訳も参考にRAGの精度が向上します。',
+    extractions_new:[
+      {category:'budget', data:{amount:50000, currency:'JPY', type:'total'}, confidence:0.81},
+    ]
+  },
+  { content:'その地域の食文化についても学習しました。地元の屋台情報は特にRAGの効果が高いデータです！',
+    extractions_new:[
+      {category:'food', data:{name:'地元グルメ', type:'料理', location:'現地'}, confidence:0.79},
+    ]
+  },
+  { content:'交通手段の情報を記録しました。新幹線vs飛行機の比較データとして活用できます。',
+    extractions_new:[
+      {category:'transportation', data:{type:'新幹線', from:'東京', to:'大阪', duration_minutes:150}, confidence:0.95},
+    ]
+  },
+]
+
+/* RAG比較モック */
+const RAG_COMPARE = {
+  without:'一般的な観光情報として、京都には多くの有名観光地があります。金閣寺や伏見稲荷大社、嵐山などが代表的なスポットとして知られています。桜の季節は全国的に混雑するため、人気の観光地では早めの行動をお勧めします。',
+  with:'収集データによると、円山公園の枝垂れ桜（3/28〜4/3が見頃）は夜間ライトアップが特に好評です。哲学の道は朝8時前が空いており、SNS映えする写真が撮れます。3泊4日の場合は「洛西エリア初日・洛中2日目・洛東3日目」の動線が効率的です。宿泊は四条烏丸エリアが交通アクセス最良（学習データ: 信頼度 0.91）。',
+}
+
+/* 学習ドキュメント */
+const DOCS_INIT = [
+  {id:'d1', title:'嵐山観光ガイド 2026',   source:'upload', status:'vectorized', chunks:42, is_active:true,  date:'2026/04/25', size:'2.4 MB', url:'https://travel.example.com/arashiyama'},
+  {id:'d2', title:'東京スポットまとめ',     source:'upload', status:'vectorized', chunks:18, is_active:true,  date:'2026/04/26', size:'156 KB', url:null},
+  {id:'d3', title:'北海道冬旅行レポート',   source:'chat',   status:'processing', chunks:null, is_active:true, date:'2026/04/28', size:'89 KB',  url:null},
+  {id:'d4', title:'ヨーロッパ旅行のコツ',  source:'upload', status:'pending',    chunks:null, is_active:false, date:'2026/04/28', size:'3.1 MB', url:null},
+  {id:'d5', title:'セッション: 京都計画',  source:'chat',   status:'vectorized', chunks:8,   is_active:true,  date:'2026/04/29', size:'12 KB',  url:null},
+  {id:'d6', title:'セッション: 東京スポット', source:'chat', status:'vectorized',chunks:5,   is_active:false, date:'2026/04/29', size:'8 KB',   url:null},
+]
+
+const SEARCH_RESULTS = [
+  {doc:'嵐山観光ガイド 2026',   chunk:'嵐山の竹林は朝7時前が最も空いており、観光客の少ない時間帯に美しい写真が撮れます。特に早朝の霧がかかる時間帯は幻想的な雰囲気を楽しめます。', score:0.94, source:'upload'},
+  {doc:'セッション: 京都計画', chunk:'円山公園の枝垂れ桜は3月下旬〜4月上旬が見頃。哲学の道も約2kmの桜並木が楽しめる名所として会話から収集。', score:0.87, source:'chat'},
+  {doc:'東京スポットまとめ',   chunk:'上野公園の花見は例年3月下旬〜4月上旬に開催。屋台や露店も立ち並び、多くの花見客で賑わいます。', score:0.71, source:'upload'},
+]
+
+/* ─── VECTOR DATA ─────────────────────────────────────────── */
+const CLUSTERS = [
+  {label:'京都',  color:'#3b82f6', cx:115, cy:88,  n:14},
+  {label:'東京',  color:'#8b5cf6', cx:220, cy:145, n:20},
+  {label:'北海道',color:'#06b6d4', cx:68,  cy:178, n:11},
+  {label:'バリ島',color:'#10b981', cx:295, cy:78,  n:9},
+  {label:'欧州',  color:'#f59e0b', cx:258, cy:212, n:16},
+]
+function genPoints() {
+  let s=42
+  const rnd=()=>{s=((s*1664525+1013904223)>>>0);return s/4294967296}
+  const pts=[]
+  CLUSTERS.forEach(cl=>{
+    for(let i=0;i<cl.n;i++){
+      const a=rnd()*Math.PI*2, r=rnd()*26+4
+      pts.push({x:cl.cx+Math.cos(a)*r, y:cl.cy+Math.sin(a)*r, color:cl.color, label:cl.label})
+    }
+  })
+  return pts
+}
+const VPOINTS = genPoints()
+
+/* ─── HELPERS ─────────────────────────────────────────────── */
+function groupSessions(sessions) {
+  const todayMs = new Date().setHours(0,0,0,0)
+  const groups = [{label:'今日',items:[]},{label:'昨日',items:[]},{label:'過去 7 日',items:[]},{label:'過去 30 日',items:[]},{label:'それ以前',items:[]}]
+  sessions.forEach(s=>{
+    const ms=new Date(s.updated_at).getTime()
+    const ds=new Date(s.updated_at).setHours(0,0,0,0)
+    if(ds>=todayMs)               groups[0].items.push(s)
+    else if(ds>=todayMs-86400000) groups[1].items.push(s)
+    else if(ms>=todayMs-7*86400000)  groups[2].items.push(s)
+    else if(ms>=todayMs-30*86400000) groups[3].items.push(s)
+    else                          groups[4].items.push(s)
+  })
+  return groups.filter(g=>g.items.length>0)
+}
+
+function formatExtractionData(data) {
+  const parts = []
+  if(data.name)    parts.push(data.name)
+  if(data.type)    parts.push(data.type)
+  if(data.location||data.target) parts.push(data.location||data.target)
+  if(data.from && data.to) parts.push(`${data.from}→${data.to}`)
+  if(data.amount)  parts.push(`¥${data.amount.toLocaleString()}`)
+  if(data.content) return data.content.slice(0,40)+(data.content.length>40?'…':'')
+  if(data.start)   parts.push(`${data.start}〜${data.end}`)
+  return parts.filter(Boolean).join(' · ')
+}
+
+/* ─── SHARED COMPONENTS ───────────────────────────────────── */
+function Header({page, onNav, user}) {
+  return (
+    <header style={{
+      position:'fixed',top:0,left:0,right:0,height:60,zIndex:200,
+      borderBottom:`1px solid ${C.border}`,
+      background:'rgba(10,10,10,0.88)',backdropFilter:'blur(16px)',
+      display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 24px',
+    }}>
+      <button onClick={()=>onNav('home')} style={{display:'flex',alignItems:'center',gap:9}}>
+        <div className="brain-glow" style={{width:30,height:30,borderRadius:9,background:C.accent,display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <Icon name="brain" size={16} style={{color:'#fff'}}/>
+        </div>
+        <span style={{fontWeight:700,fontSize:15,letterSpacing:'-0.01em',color:C.textPrimary}}>WanderWise AI</span>
+      </button>
+      <nav style={{display:'flex',alignItems:'center',gap:6,fontSize:14,fontWeight:500}}>
+        {[{id:'chat',label:'チャット'},{id:'learning',label:'学習管理'}].map(n=>(
+          <button key={n.id} onClick={()=>onNav(n.id)} style={{
+            padding:'6px 14px',borderRadius:8,transition:'all 0.2s',
+            color:page===n.id?C.textPrimary:C.textMuted,
+            background:page===n.id?'rgba(255,255,255,0.07)':'transparent',
+          }}>{n.label}</button>
+        ))}
+        {user && <>
+          <div style={{width:1,height:20,background:C.border,margin:'0 8px'}}/>
+          <div style={{display:'flex',alignItems:'center',gap:6,color:C.textSec,fontSize:13}}>
+            <Icon name="user" size={14}/>
+            <span style={{color:C.textPrimary}}>{user.name}</span>
+          </div>
+          <button onClick={()=>onNav('login')} style={{display:'flex',alignItems:'center',gap:5,color:C.textMuted,fontSize:13,padding:'4px 8px'}}>
+            <Icon name="logout" size={14}/>
+          </button>
+        </>}
+      </nav>
+    </header>
+  )
+}
+
+/* ─── LOGIN ───────────────────────────────────────────────── */
+function LoginPage({onLogin}) {
+  const [email,setEmail]=useState('')
+  const [pw,setPw]=useState('')
+  const [name,setName]=useState('')
+  const [showPw,setShowPw]=useState(false)
+  const [loading,setLoading]=useState(false)
+  const [mode,setMode]=useState('login')
+  const [focused,setFocused]=useState('')
+
+  const submit=e=>{
+    e.preventDefault(); setLoading(true)
+    setTimeout(()=>{setLoading(false);onLogin({name:name||email.split('@')[0],email})},900)
+  }
+  const inp=fld=>({
+    width:'100%',
+    background:focused===fld?'rgba(255,255,255,0.05)':'rgba(255,255,255,0.03)',
+    border:focused===fld?'1px solid rgba(37,99,235,0.5)':`1px solid ${C.border}`,
+    borderRadius:12,padding:'12px 16px',color:C.textPrimary,fontSize:14,outline:'none',transition:'all 0.2s',
+  })
+
+  return (
+    <div className="page-enter" style={{height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:C.bg,padding:24,position:'relative',overflow:'hidden'}}>
+      <div style={{position:'absolute',top:'25%',left:'50%',transform:'translateX(-50%)',width:500,height:500,borderRadius:'50%',background:'radial-gradient(circle,rgba(37,99,235,0.06) 0%,transparent 70%)',pointerEvents:'none'}}/>
+      <div style={{width:'100%',maxWidth:400,position:'relative'}}>
+        <div style={{textAlign:'center',marginBottom:32}}>
+          <div className="brain-glow" style={{width:58,height:58,borderRadius:18,background:C.accent,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px'}}>
+            <Icon name="brain" size={28} style={{color:'#fff'}}/>
+          </div>
+          <h1 style={{fontSize:22,fontWeight:800,color:C.textPrimary,letterSpacing:'-0.02em'}}>WanderWise AI</h1>
+          <p style={{fontSize:13,color:C.textMuted,marginTop:4}}>{mode==='login'?'アカウントにログイン':'新規アカウント作成'}</p>
+        </div>
+        <form onSubmit={submit} style={{background:'rgba(255,255,255,0.02)',border:`1px solid ${C.border}`,borderRadius:20,padding:32,display:'flex',flexDirection:'column',gap:16}}>
+          {mode==='register'&&(
+            <div>
+              <label style={{fontSize:12,fontWeight:600,color:C.textSec,display:'block',marginBottom:7,textTransform:'uppercase',letterSpacing:'0.05em'}}>名前</label>
+              <input type="text" value={name} onChange={e=>setName(e.target.value)} placeholder="山田 太郎" style={inp('name')} onFocus={()=>setFocused('name')} onBlur={()=>setFocused('')}/>
+            </div>
+          )}
+          <div>
+            <label style={{fontSize:12,fontWeight:600,color:C.textSec,display:'block',marginBottom:7,textTransform:'uppercase',letterSpacing:'0.05em'}}>メールアドレス</label>
+            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required placeholder="your@email.com" style={inp('email')} onFocus={()=>setFocused('email')} onBlur={()=>setFocused('')}/>
+          </div>
+          <div>
+            <label style={{fontSize:12,fontWeight:600,color:C.textSec,display:'block',marginBottom:7,textTransform:'uppercase',letterSpacing:'0.05em'}}>パスワード</label>
+            <div style={{position:'relative'}}>
+              <input type={showPw?'text':'password'} value={pw} onChange={e=>setPw(e.target.value)} required placeholder="••••••••" style={{...inp('pw'),paddingRight:44}} onFocus={()=>setFocused('pw')} onBlur={()=>setFocused('')}/>
+              <button type="button" onClick={()=>setShowPw(v=>!v)} style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',color:C.textMuted,padding:4}}>
+                <Icon name={showPw?'eyeoff':'eye'} size={16}/>
+              </button>
+            </div>
+          </div>
+          <button type="submit" disabled={loading} style={{width:'100%',background:loading?'#1d4ed8':C.accent,color:'#fff',fontWeight:700,fontSize:15,padding:'13px 0',borderRadius:12,marginTop:4,boxShadow:`0 0 24px ${C.accentGlow}`,transition:'all 0.2s',opacity:loading?0.8:1}}>
+            {loading?'...':(mode==='login'?'ログイン':'アカウント作成')}
+          </button>
+        </form>
+        <p style={{textAlign:'center',fontSize:13,color:C.textMuted,marginTop:20}}>
+          {mode==='login'?'アカウントをお持ちでない方は ':'すでにアカウントをお持ちの方は '}
+          <button onClick={()=>setMode(m=>m==='login'?'register':'login')} style={{color:'#60a5fa',fontWeight:600}}>{mode==='login'?'新規登録':'ログイン'}</button>
+        </p>
+      </div>
+    </div>
+  )
+}
+
+/* ─── HOME PAGE ───────────────────────────────────────────── */
+function FCard({icon,title,desc}) {
+  const [h,setH]=useState(false)
+  return (
+    <div onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)} style={{borderRadius:16,padding:24,transition:'all 0.25s',border:h?'1px solid rgba(37,99,235,0.35)':`1px solid ${C.border}`,background:h?'rgba(37,99,235,0.04)':C.card,boxShadow:h?'0 0 24px rgba(37,99,235,0.1)':'none'}}>
+      <div style={{width:44,height:44,borderRadius:12,marginBottom:16,background:h?'rgba(37,99,235,0.18)':'rgba(255,255,255,0.04)',display:'flex',alignItems:'center',justifyContent:'center',color:h?'#60a5fa':'#3b82f6',transition:'all 0.25s'}}>
+        <Icon name={icon} size={20}/>
+      </div>
+      <div style={{fontWeight:700,fontSize:15,color:C.textPrimary,marginBottom:8}}>{title}</div>
+      <div style={{fontSize:13,color:C.textMuted,lineHeight:1.65}}>{desc}</div>
+    </div>
+  )
+}
+function HomePage({onNav}) {
+  return (
+    <div className="page-enter" style={{height:'100vh',overflowY:'auto',paddingTop:60}}>
+      <div style={{maxWidth:880,margin:'0 auto',padding:'56px 24px 80px',textAlign:'center',position:'relative'}}>
+        <div style={{position:'fixed',top:'30%',left:'50%',transform:'translateX(-50%)',width:600,height:600,borderRadius:'50%',background:'radial-gradient(circle,rgba(37,99,235,0.05) 0%,transparent 70%)',pointerEvents:'none'}}/>
+        <div style={{display:'inline-flex',alignItems:'center',gap:7,marginBottom:28,borderRadius:100,border:'1px solid rgba(37,99,235,0.28)',background:'rgba(37,99,235,0.08)',padding:'6px 16px',fontSize:13,fontWeight:600,color:'#60a5fa'}}>
+          <Icon name="brain" size={13}/>LLM学習可視化プラットフォーム
+        </div>
+        <h1 style={{fontSize:56,fontWeight:800,lineHeight:1.12,marginBottom:22,letterSpacing:'-0.035em',color:C.textPrimary}}>
+          チャットで学ぶ、<br/>
+          <span style={{background:'linear-gradient(135deg,#3b82f6 0%,#818cf8 100%)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>旅行データの世界</span>
+        </h1>
+        <p style={{fontSize:17,color:C.textMuted,maxWidth:540,margin:'0 auto 44px',lineHeight:1.75}}>
+          会話を通じて旅行データを収集し、LLMの学習過程をリアルタイムで可視化。<br/>RAGの動作を体験しながら、AIの仕組みを理解できます。
+        </p>
+        <div style={{display:'flex',gap:12,justifyContent:'center',marginBottom:72,flexWrap:'wrap'}}>
+          <button onClick={()=>onNav('chat')} style={{display:'flex',alignItems:'center',gap:8,background:C.accent,color:'#fff',fontWeight:700,fontSize:15,padding:'14px 28px',borderRadius:12,boxShadow:`0 0 28px ${C.accentGlow}`}}>
+            <Icon name="msg" size={17}/>チャットを始める
+          </button>
+          <button onClick={()=>onNav('learning')} style={{display:'flex',alignItems:'center',gap:8,background:'rgba(255,255,255,0.04)',color:C.textPrimary,border:`1px solid ${C.border}`,fontWeight:600,fontSize:15,padding:'14px 28px',borderRadius:12}}>
+            <Icon name="chart" size={17}/>学習を見る
+          </button>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:14,marginBottom:64}}>
+          <FCard icon="msg"   title="チャット収集"  desc="自然な会話から旅行データを自動抽出・構造化"/>
+          <FCard icon="brain" title="学習可視化"    desc="ベクトル化プロセスをリアルタイムで確認"/>
+          <FCard icon="chart" title="RAG実装"       desc="検索拡張生成の動作を視覚的に理解"/>
+          <FCard icon="db"    title="データ管理"    desc="学習データの保存・検索・管理を一元化"/>
+        </div>
+        <div style={{border:`1px solid ${C.border}`,borderRadius:20,background:'rgba(255,255,255,0.01)',padding:'40px 48px'}}>
+          <h2 style={{fontSize:18,fontWeight:700,marginBottom:32,color:C.textPrimary}}>技術スタック</h2>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:32,textAlign:'left'}}>
+            {[
+              {label:'バックエンド',  items:['FastAPI — 高性能Webフレームワーク','Ollama / qwen2.5:3b — LLM','LangChain — RAG実装','ChromaDB — ベクトルデータベース']},
+              {label:'フロントエンド', items:['Next.js 16 — Reactフレームワーク','TypeScript — 型安全な開発','Tailwind CSS — ユーティリティファースト','PostgreSQL — 構造化データ永続化']},
+            ].map(col=>(
+              <div key={col.label}>
+                <div style={{color:'#60a5fa',fontWeight:700,fontSize:14,marginBottom:16,display:'flex',alignItems:'center',gap:7}}>
+                  <div style={{width:6,height:6,borderRadius:'50%',background:'#3b82f6'}}/>
+                  {col.label}
+                </div>
+                {col.items.map(item=>(
+                  <div key={item} style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,color:C.textSec,fontSize:13}}>
+                    <div style={{width:5,height:5,borderRadius:'50%',background:C.textMuted,flexShrink:0}}/>
+                    {item}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─── EXTRACTION PANEL ────────────────────────────────────── */
+function ExtractionPanel({extractions, allExtractions}) {
+  if(!extractions || extractions.length===0) return (
+    <div style={{textAlign:'center',padding:'40px 16px',color:'#2d3748'}}>
+      <Icon name="sparkle" size={28} style={{margin:'0 auto 10px',opacity:0.2}}/>
+      <div style={{fontSize:12}}>会話から旅行データを<br/>自動抽出します</div>
+    </div>
+  )
+  const items = extractions.map(id=>allExtractions[id]).filter(Boolean)
+  const byCategory = {}
+  items.forEach(ex=>{ if(!byCategory[ex.category]) byCategory[ex.category]=[]; byCategory[ex.category].push(ex) })
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:10}}>
+      {Object.entries(byCategory).map(([cat,exs])=>{
+        const meta = CAT_META[cat]||{label:cat,icon:'sparkle',color:'#64748b',bg:'rgba(100,116,139,0.1)'}
+        return (
+          <div key={cat} className="badge-pop" style={{borderRadius:12,overflow:'hidden',border:`1px solid ${meta.color}22`}}>
+            <div style={{display:'flex',alignItems:'center',gap:7,padding:'8px 12px',background:meta.bg}}>
+              <Icon name={meta.icon} size={13} style={{color:meta.color}}/>
+              <span style={{fontSize:11,fontWeight:700,color:meta.color,textTransform:'uppercase',letterSpacing:'0.06em'}}>{meta.label}</span>
+              <div style={{marginLeft:'auto',fontSize:10,color:meta.color,opacity:0.7}}>{exs[0].confidence>=0.9?'高信頼度':exs[0].confidence>=0.8?'中信頼度':'低信頼度'}</div>
+            </div>
+            {exs.map((ex,i)=>(
+              <div key={ex.id||i} style={{padding:'8px 12px',borderTop:`1px solid ${meta.color}18`,background:'rgba(0,0,0,0.3)'}}>
+                <div style={{fontSize:12,color:C.textSec,lineHeight:1.5}}>{formatExtractionData(ex.data)}</div>
+                <div style={{fontSize:10,color:C.textMuted,marginTop:3}}>信頼度 {Math.round(ex.confidence*100)}%</div>
+              </div>
+            ))}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+/* ─── RAG COMPARE MODAL ───────────────────────────────────── */
+function RagCompareModal({query, onClose}) {
+  const [loading, setLoading] = useState(true)
+  useEffect(()=>{ setTimeout(()=>setLoading(false), 1400) }, [])
+
+  return (
+    <div style={{position:'fixed',inset:0,zIndex:500,background:'rgba(0,0,0,0.8)',backdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',padding:24}}
+      onClick={onClose}>
+      <div style={{width:'100%',maxWidth:820,background:'#0f0f0f',border:`1px solid ${C.border}`,borderRadius:20,overflow:'hidden',maxHeight:'85vh',display:'flex',flexDirection:'column'}}
+        onClick={e=>e.stopPropagation()}>
+        {/* Header */}
+        <div style={{padding:'16px 20px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <div style={{display:'flex',alignItems:'center',gap:9}}>
+            <div style={{width:28,height:28,borderRadius:8,background:'rgba(37,99,235,0.15)',display:'flex',alignItems:'center',justifyContent:'center',color:'#3b82f6'}}>
+              <Icon name="columns" size={14}/>
+            </div>
+            <div>
+              <div style={{fontSize:14,fontWeight:700,color:C.textPrimary}}>RAG 回答比較</div>
+              <div style={{fontSize:11,color:C.textMuted}}>同じ質問に対するRAGあり・なしの違い</div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{color:C.textMuted,padding:6,borderRadius:8}}
+            onMouseEnter={e=>e.currentTarget.style.color=C.textPrimary}
+            onMouseLeave={e=>e.currentTarget.style.color=C.textMuted}>
+            <Icon name="xmark" size={18}/>
+          </button>
+        </div>
+        {/* Query */}
+        <div style={{padding:'14px 20px',borderBottom:`1px solid ${C.border}`,background:'rgba(255,255,255,0.01)'}}>
+          <div style={{fontSize:11,color:C.textMuted,marginBottom:4,textTransform:'uppercase',letterSpacing:'0.05em'}}>質問</div>
+          <div style={{fontSize:14,color:C.textSec,fontStyle:'italic'}}>「{query}」</div>
+        </div>
+        {loading ? (
+          <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,padding:48}}>
+            <div style={{display:'flex',gap:5}}>
+              <div className="dot1" style={{width:8,height:8,borderRadius:'50%',background:'#3b82f6'}}/>
+              <div className="dot2" style={{width:8,height:8,borderRadius:'50%',background:'#3b82f6'}}/>
+              <div className="dot3" style={{width:8,height:8,borderRadius:'50%',background:'#3b82f6'}}/>
+            </div>
+            <div style={{fontSize:13,color:C.textMuted}}>2つのモードで回答を生成中...</div>
+          </div>
+        ) : (
+          <div style={{flex:1,overflowY:'auto',display:'grid',gridTemplateColumns:'1fr 1fr'}}>
+            {/* RAGなし */}
+            <div style={{padding:20,borderRight:`1px solid ${C.border}`}}>
+              <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:14}}>
+                <div style={{width:8,height:8,borderRadius:'50%',background:'#475569'}}/>
+                <span style={{fontSize:12,fontWeight:700,color:C.textMuted,textTransform:'uppercase',letterSpacing:'0.05em'}}>RAGなし</span>
+                <span style={{fontSize:11,color:'#2d3748',marginLeft:'auto'}}>LLMの知識のみ</span>
+              </div>
+              <div style={{fontSize:13,color:'#64748b',lineHeight:1.8,padding:'14px 16px',background:'rgba(255,255,255,0.01)',borderRadius:10,border:`1px solid rgba(255,255,255,0.04)`}}>
+                {RAG_COMPARE.without}
+              </div>
+            </div>
+            {/* RAGあり */}
+            <div style={{padding:20,background:'rgba(37,99,235,0.02)'}}>
+              <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:14}}>
+                <div style={{width:8,height:8,borderRadius:'50%',background:'#3b82f6',boxShadow:'0 0 6px #3b82f6'}}/>
+                <span style={{fontSize:12,fontWeight:700,color:'#60a5fa',textTransform:'uppercase',letterSpacing:'0.05em'}}>RAGあり</span>
+                <span style={{fontSize:11,color:'#1d4ed8',marginLeft:'auto'}}>収集データを活用</span>
+              </div>
+              <div style={{fontSize:13,color:C.textSec,lineHeight:1.8,padding:'14px 16px',background:'rgba(37,99,235,0.05)',borderRadius:10,border:'1px solid rgba(37,99,235,0.18)'}}>
+                {RAG_COMPARE.with}
+              </div>
+              <div style={{marginTop:12,padding:'10px 12px',borderRadius:9,background:'rgba(16,185,129,0.07)',border:'1px solid rgba(16,185,129,0.15)',display:'flex',alignItems:'flex-start',gap:8}}>
+                <Icon name="sparkle" size={13} style={{color:'#10b981',flexShrink:0,marginTop:1}}/>
+                <div style={{fontSize:12,color:'#6ee7b7',lineHeight:1.6}}>RAGにより具体的な時刻・信頼度スコアを含む回答が生成されました。収集データが多いほど回答精度が向上します。</div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* ─── CHAT PAGE ───────────────────────────────────────────── */
+function ChatPage() {
+  const [sessions, setSessions] = useState(SESSIONS_INIT)
+  const [currId, setCurrId] = useState('s1')
+  const [msgs, setMsgs] = useState(INIT_MSGS['s1']||[])
+  const [allExtractions, setAllExtractions] = useState(
+    Object.values(EXTRACTIONS_INIT).flat().reduce((acc,ex)=>{acc[ex.id]=ex;return acc},{})
+  )
+  const [sessionExtractions, setSessionExtractions] = useState(EXTRACTIONS_INIT)
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [editId, setEditId] = useState(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [hoverId, setHoverId] = useState(null)
+  const [showPanel, setShowPanel] = useState(true)
+  const [compareQuery, setCompareQuery] = useState(null)
+  const [replyIdx, setReplyIdx] = useState(0)
+  const scrollRef = useRef(null)
+  const taRef = useRef(null)
+
+  /* 現セッションの全抽出IDを集める */
+  const currExtractionIds = useMemo(()=>{
+    return (msgs||[]).flatMap(m=>m.extractions||[])
+  },[msgs])
+
+  useEffect(()=>{
+    if(scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+  },[msgs,loading])
+
+  useEffect(()=>{
+    if(!taRef.current) return
+    taRef.current.style.height='auto'
+    taRef.current.style.height=Math.min(taRef.current.scrollHeight,160)+'px'
+  },[input])
+
+  const switchSession = useCallback(id=>{
+    setCurrId(id); setInput('')
+    setMsgs(INIT_MSGS[id]||[{role:'assistant',content:'こんにちは！旅行についてお話ししましょう。',time:'',extractions:[]}])
+  },[])
+
+  const newSession = ()=>{
+    const id='n'+Date.now()
+    setSessions(p=>[{id,title:'新しいチャット',updated_at:new Date()},...p])
+    setSessionExtractions(p=>({...p,[id]:[]}))
+    setCurrId(id); setInput('')
+    setMsgs([{role:'assistant',content:'こんにちは！旅行についてお話ししましょう。最近行った場所や、行きたい場所について教えてください。',time:'',extractions:[]}])
+  }
+
+  const delSession=(id,e)=>{
+    e.stopPropagation()
+    const next=sessions.filter(s=>s.id!==id)
+    setSessions(next)
+    if(currId===id){ if(next.length>0) switchSession(next[0].id); else newSession() }
+  }
+
+  const handleSend=()=>{
+    if(!input.trim()||loading) return
+    const t=new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})
+    const txt=input.trim()
+    setMsgs(p=>[...p,{role:'user',content:txt,time:t,extractions:[]}])
+    setInput('')
+    setLoading(true)
+    const curr=sessions.find(s=>s.id===currId)
+    if(curr?.title==='新しいチャット'){
+      setSessions(p=>p.map(s=>s.id===currId?{...s,title:txt.slice(0,22)+(txt.length>22?'…':''),updated_at:new Date()}:s))
+    }
+    const pool=AI_REPLIES_POOL[replyIdx%AI_REPLIES_POOL.length]
+    setReplyIdx(i=>i+1)
+    setTimeout(()=>{
+      const t2=new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})
+      /* 新しい抽出データをグローバルに追加 */
+      const newExIds=[]
+      const newExMap={}
+      pool.extractions_new.forEach(ex=>{
+        const id='ex_'+Date.now()+'_'+Math.random().toString(36).slice(2)
+        newExIds.push(id)
+        newExMap[id]={...ex,id}
+      })
+      setAllExtractions(p=>({...p,...newExMap}))
+      setSessionExtractions(p=>({...p,[currId]:[...(p[currId]||[]),...Object.values(newExMap)]}))
+      setMsgs(p=>[...p,{role:'assistant',content:pool.content,time:t2,extractions:newExIds}])
+      setLoading(false)
+    },1000+Math.random()*600)
+  }
+
+  const groups=useMemo(()=>groupSessions(sessions),[sessions])
+
+  /* 直近メッセージの抽出 */
+  const lastMsgExtractions = useMemo(()=>{
+    const last=[...msgs].reverse().find(m=>m.role==='assistant'&&(m.extractions||[]).length>0)
+    return last ? last.extractions : []
+  },[msgs])
+
+  return (
+    <div className="page-enter" style={{height:'100vh',display:'flex',flexDirection:'column',paddingTop:60}}>
+      {compareQuery && <RagCompareModal query={compareQuery} onClose={()=>setCompareQuery(null)}/>}
+      <div style={{flex:1,display:'flex',overflow:'hidden'}}>
+
+        {/* ── Sidebar ── */}
+        <aside style={{width:240,flexShrink:0,display:'flex',flexDirection:'column',background:'#0c0c0c',borderRight:`1px solid ${C.border}`}}>
+          <div style={{padding:10,borderBottom:`1px solid ${C.border}`}}>
+            <button onClick={newSession} style={{display:'flex',alignItems:'center',gap:8,width:'100%',padding:'9px 12px',borderRadius:9,fontSize:13,fontWeight:500,color:C.textSec,border:`1px solid ${C.border}`,transition:'all 0.2s'}}
+              onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,0.05)';e.currentTarget.style.color=C.textPrimary}}
+              onMouseLeave={e=>{e.currentTarget.style.background='';e.currentTarget.style.color=C.textSec}}>
+              <Icon name="plus" size={14}/>新しいチャット
+            </button>
+          </div>
+          <div style={{flex:1,overflowY:'auto',padding:'8px 6px'}}>
+            {groups.map(g=>(
+              <div key={g.label} style={{marginBottom:14}}>
+                <div style={{fontSize:10,fontWeight:700,color:'#334155',padding:'0 8px 5px',textTransform:'uppercase',letterSpacing:'0.07em'}}>{g.label}</div>
+                {g.items.map(sess=>{
+                  const active=sess.id===currId
+                  const exCount=(sessionExtractions[sess.id]||[]).length
+                  return (
+                    <div key={sess.id}
+                      onClick={()=>editId!==sess.id&&switchSession(sess.id)}
+                      onMouseEnter={()=>setHoverId(sess.id)} onMouseLeave={()=>setHoverId(null)}
+                      style={{display:'flex',alignItems:'center',gap:7,padding:'8px 10px',borderRadius:8,cursor:'pointer',marginBottom:1,transition:'all 0.15s',background:active?'rgba(255,255,255,0.08)':'transparent',color:active?C.textPrimary:C.textMuted}}>
+                      <Icon name="msg" size={13} style={{flexShrink:0,opacity:0.55}}/>
+                      {editId===sess.id ? (
+                        <input autoFocus value={editTitle} onChange={e=>setEditTitle(e.target.value)}
+                          onKeyDown={e=>{if(e.key==='Enter'){setSessions(p=>p.map(s=>s.id===sess.id?{...s,title:editTitle.trim()||s.title}:s));setEditId(null)}if(e.key==='Escape')setEditId(null)}}
+                          onBlur={()=>{setSessions(p=>p.map(s=>s.id===sess.id?{...s,title:editTitle.trim()||s.title}:s));setEditId(null)}}
+                          onClick={e=>e.stopPropagation()}
+                          style={{flex:1,background:'transparent',border:'none',borderBottom:'1px solid #3b82f6',color:C.textPrimary,fontSize:13,outline:'none',paddingBottom:1}}/>
+                      ):(
+                        <span style={{flex:1,fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{sess.title}</span>
+                      )}
+                      {exCount>0 && editId!==sess.id && hoverId!==sess.id && (
+                        <div style={{fontSize:10,fontWeight:700,padding:'1px 6px',borderRadius:10,background:'rgba(37,99,235,0.2)',color:'#60a5fa',flexShrink:0}}>{exCount}</div>
+                      )}
+                      {(hoverId===sess.id||active)&&editId!==sess.id&&(
+                        <div style={{display:'flex',gap:1}} onClick={e=>e.stopPropagation()}>
+                          <button onClick={e=>{e.stopPropagation();setEditTitle(sess.title);setEditId(sess.id)}} style={{padding:3,borderRadius:4,color:C.textMuted}}
+                            onMouseEnter={e=>e.currentTarget.style.color=C.textSec} onMouseLeave={e=>e.currentTarget.style.color=C.textMuted}>
+                            <Icon name="pencil" size={12}/>
+                          </button>
+                          <button onClick={e=>delSession(sess.id,e)} style={{padding:3,borderRadius:4,color:C.textMuted}}
+                            onMouseEnter={e=>e.currentTarget.style.color='#f87171'} onMouseLeave={e=>e.currentTarget.style.color=C.textMuted}>
+                            <Icon name="trash" size={12}/>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
+        </aside>
+
+        {/* ── Chat Main ── */}
+        <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',minWidth:0}}>
+          {/* Toolbar */}
+          <div style={{padding:'8px 16px',borderBottom:`1px solid rgba(255,255,255,0.04)`,display:'flex',alignItems:'center',gap:8,justifyContent:'flex-end'}}>
+            <button onClick={()=>setCompareQuery('京都の混雑を避けるコツは？')} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 12px',borderRadius:8,fontSize:12,fontWeight:600,border:'1px solid rgba(37,99,235,0.28)',background:'rgba(37,99,235,0.07)',color:'#60a5fa',transition:'all 0.2s'}}
+              onMouseEnter={e=>{e.currentTarget.style.background='rgba(37,99,235,0.14)'}}
+              onMouseLeave={e=>{e.currentTarget.style.background='rgba(37,99,235,0.07)'}}>
+              <Icon name="columns" size={13}/>RAG比較
+            </button>
+            <button onClick={()=>setShowPanel(v=>!v)} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 12px',borderRadius:8,fontSize:12,fontWeight:600,transition:'all 0.2s',border:`1px solid ${showPanel?'rgba(16,185,129,0.3)':C.border}`,background:showPanel?'rgba(16,185,129,0.08)':'transparent',color:showPanel?'#34d399':C.textMuted}}
+              onMouseEnter={e=>{e.currentTarget.style.opacity='0.8'}} onMouseLeave={e=>{e.currentTarget.style.opacity='1'}}>
+              <Icon name="sparkle" size={13}/>抽出データ {showPanel?'非表示':'表示'}
+            </button>
+          </div>
+
+          <div style={{flex:1,display:'flex',overflow:'hidden'}}>
+            {/* Messages */}
+            <div ref={scrollRef} style={{flex:1,overflowY:'auto',padding:'20px 0',minWidth:0}}>
+              <div style={{maxWidth:640,margin:'0 auto',padding:'0 16px'}}>
+                {msgs.map((m,i)=>(
+                  <div key={i} className="msg-in" style={{display:'flex',gap:10,marginBottom:16,flexDirection:m.role==='user'?'row-reverse':'row'}}>
+                    {m.role==='assistant'&&(
+                      <div style={{width:30,height:30,borderRadius:9,background:C.accent,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:2,boxShadow:`0 0 10px ${C.accentGlow}`}}>
+                        <Icon name="brain" size={14} style={{color:'#fff'}}/>
+                      </div>
+                    )}
+                    <div style={{maxWidth:'76%'}}>
+                      <div style={{padding:'11px 15px',fontSize:14,lineHeight:1.7,color:'#cbd5e1',...(m.role==='assistant'?{background:'#111',border:'1px solid rgba(255,255,255,0.06)',borderRadius:14,borderTopLeftRadius:4}:{background:'rgba(37,99,235,0.13)',border:'1px solid rgba(37,99,235,0.22)',borderRadius:14,borderTopRightRadius:4})}}>
+                        <p style={{whiteSpace:'pre-wrap'}}>{m.content}</p>
+                        {m.time&&<div style={{fontSize:11,color:C.textMuted,marginTop:6}}>{m.time}</div>}
+                      </div>
+                      {/* 抽出バッジ */}
+                      {m.role==='assistant' && (m.extractions||[]).length>0 && (
+                        <div style={{display:'flex',flexWrap:'wrap',gap:5,marginTop:7}}>
+                          {(m.extractions||[]).map(id=>{
+                            const ex=allExtractions[id]; if(!ex) return null
+                            const meta=CAT_META[ex.category]||{label:ex.category,color:'#64748b',bg:'rgba(100,116,139,0.1)',icon:'sparkle'}
+                            return (
+                              <div key={id} className="badge-pop" style={{display:'flex',alignItems:'center',gap:4,padding:'3px 8px',borderRadius:20,background:meta.bg,border:`1px solid ${meta.color}30`,fontSize:11,color:meta.color}}>
+                                <Icon name={meta.icon} size={10}/>
+                                <span style={{fontWeight:600}}>{meta.label}</span>
+                                <span style={{opacity:0.7,maxWidth:80,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                                  {ex.data.name||ex.data.type||ex.data.content?.slice(0,12)||''}
+                                </span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {loading&&(
+                  <div style={{display:'flex',gap:10,marginBottom:16}}>
+                    <div style={{width:30,height:30,borderRadius:9,background:C.accent,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:2,boxShadow:`0 0 10px ${C.accentGlow}`}}>
+                      <Icon name="brain" size={14} style={{color:'#fff'}}/>
+                    </div>
+                    <div style={{padding:'13px 16px',borderRadius:14,borderTopLeftRadius:4,background:'#111',border:'1px solid rgba(255,255,255,0.06)',display:'flex',gap:5,alignItems:'center'}}>
+                      <div className="dot1" style={{width:7,height:7,borderRadius:'50%',background:'#3b82f6'}}/>
+                      <div className="dot2" style={{width:7,height:7,borderRadius:'50%',background:'#3b82f6'}}/>
+                      <div className="dot3" style={{width:7,height:7,borderRadius:'50%',background:'#3b82f6'}}/>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ── Extraction Panel ── */}
+            {showPanel&&(
+              <div className="panel-slide" style={{width:240,flexShrink:0,borderLeft:`1px solid ${C.border}`,display:'flex',flexDirection:'column',background:'#0c0c0c',overflow:'hidden'}}>
+                <div style={{padding:'12px 14px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',gap:7}}>
+                  <Icon name="sparkle" size={13} style={{color:'#10b981'}}/>
+                  <span style={{fontSize:12,fontWeight:700,color:C.textSec}}>抽出データ</span>
+                  <div style={{marginLeft:'auto',fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:10,background:'rgba(16,185,129,0.1)',color:'#34d399'}}>{currExtractionIds.length}</div>
+                </div>
+                <div style={{flex:1,overflowY:'auto',padding:10}}>
+                  <ExtractionPanel extractions={currExtractionIds} allExtractions={allExtractions}/>
+                </div>
+                {/* RAG compare shortcut inside panel */}
+                <div style={{padding:10,borderTop:`1px solid ${C.border}`}}>
+                  <button onClick={()=>setCompareQuery(msgs.find(m=>m.role==='user')?.content||'旅行について')} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'8px 0',borderRadius:9,fontSize:12,fontWeight:600,background:'rgba(37,99,235,0.08)',border:'1px solid rgba(37,99,235,0.2)',color:'#60a5fa',transition:'all 0.2s'}}
+                    onMouseEnter={e=>e.currentTarget.style.background='rgba(37,99,235,0.15)'}
+                    onMouseLeave={e=>e.currentTarget.style.background='rgba(37,99,235,0.08)'}>
+                    <Icon name="columns" size={13}/>RAG効果を比較
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Input */}
+          <div style={{padding:'10px 16px 18px',borderTop:`1px solid rgba(255,255,255,0.04)`}}>
+            <div style={{maxWidth:640,margin:'0 auto'}}>
+              <div style={{display:'flex',alignItems:'flex-end',gap:8,background:'#111',border:'1px solid rgba(255,255,255,0.09)',borderRadius:14,padding:8}}>
+                <textarea ref={taRef} value={input} onChange={e=>setInput(e.target.value)}
+                  onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();handleSend()}}}
+                  placeholder="旅行について話してください... (Shift+Enter で改行)"
+                  disabled={loading} rows={1}
+                  style={{flex:1,background:'transparent',border:'none',outline:'none',color:C.textPrimary,fontSize:14,lineHeight:1.6,resize:'none',padding:'8px 10px',minHeight:40,maxHeight:160}}/>
+                <button onClick={handleSend} disabled={!input.trim()||loading} style={{width:36,height:36,borderRadius:9,background:C.accent,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,color:'#fff',marginBottom:1,transition:'all 0.2s',opacity:(!input.trim()||loading)?0.35:1,boxShadow:input.trim()?`0 0 12px ${C.accentGlow}`:'none'}}>
+                  <Icon name="send" size={15}/>
+                </button>
+              </div>
+              <div style={{textAlign:'center',fontSize:11,color:'#2d3748',marginTop:7,letterSpacing:'0.03em'}}>
+                会話から旅行データを自動抽出し、RAGの精度を継続的に向上させます
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─── TOGGLE SWITCH ───────────────────────────────────────── */
+function Toggle({on, onChange}) {
+  return (
+    <button onClick={()=>onChange(!on)} style={{
+      width:36, height:20, borderRadius:10, position:'relative', flexShrink:0,
+      background: on ? '#2563eb' : 'rgba(255,255,255,0.1)',
+      border: on ? '1px solid #3b82f6' : '1px solid rgba(255,255,255,0.1)',
+      transition:'all 0.2s', boxShadow: on ? '0 0 8px rgba(37,99,235,0.4)' : 'none',
+    }}>
+      <div style={{
+        position:'absolute', top:2, left: on ? 17 : 2,
+        width:14, height:14, borderRadius:'50%',
+        background: on ? '#fff' : 'rgba(255,255,255,0.5)',
+        transition:'left 0.2s',
+      }}/>
+    </button>
+  )
+}
+
+/* ─── SOURCE BADGE ────────────────────────────────────────── */
+function SourceBadge({source}) {
+  const map = {
+    chat:   {label:'chat',   color:'#8b5cf6', bg:'rgba(139,92,246,0.1)'},
+    upload: {label:'upload', color:'#06b6d4', bg:'rgba(6,182,212,0.1)'},
+    manual: {label:'manual', color:'#f59e0b', bg:'rgba(245,158,11,0.1)'},
+  }
+  const s = map[source]||map.manual
+  return (
+    <span style={{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,color:s.color,background:s.bg,letterSpacing:'0.04em',textTransform:'uppercase'}}>
+      {s.label}
+    </span>
+  )
+}
+
+/* ─── LEARNING PAGE ───────────────────────────────────────── */
+function LearningPage() {
+  const [tab, setTab]         = useState('docs')
+  const [docs, setDocs]       = useState(DOCS_INIT)
+  const [query, setQuery]     = useState('')
+  const [results, setResults] = useState(null)
+  const [searching, setSearching] = useState(false)
+  const [hoverPt, setHoverPt] = useState(null)
+  const [urlInput, setUrlInput] = useState('')
+  const [urlTitle, setUrlTitle] = useState('')
+  const [urlLoading, setUrlLoading] = useState(false)
+  const [showUrlForm, setShowUrlForm] = useState(false)
+
+  const toggleDoc = id => setDocs(p => p.map(d => d.id===id ? {...d, is_active:!d.is_active} : d))
+  const deleteDoc = id => setDocs(p => p.filter(d => d.id!==id))
+
+  const addUrl = () => {
+    if(!urlInput.trim()||!urlTitle.trim()) return
+    setUrlLoading(true)
+    setTimeout(()=>{
+      const id = 'du' + Date.now()
+      setDocs(p=>[{
+        id, title:urlTitle, source:'upload', status:'processing',
+        chunks:null, is_active:true, date:'2026/05/01', size:'—',
+        url:urlInput,
+      },...p])
+      setUrlInput(''); setUrlTitle(''); setUrlLoading(false); setShowUrlForm(false)
+      /* 処理完了をシミュレート */
+      setTimeout(()=>{
+        setDocs(p=>p.map(d=>d.id===id?{...d,status:'vectorized',chunks:Math.floor(Math.random()*30)+8}:d))
+      },2800)
+    },1200)
+  }
+
+  const doSearch = () => {
+    if(!query.trim()) return
+    setSearching(true); setResults(null)
+    setTimeout(()=>{ setSearching(false); setResults(SEARCH_RESULTS) }, 1100)
+  }
+
+  const statusInfo = s => ({
+    vectorized: {label:'完了',      color:'#10b981', bg:'rgba(16,185,129,0.1)'},
+    processing: {label:'処理中',    color:'#f59e0b', bg:'rgba(245,158,11,0.1)'},
+    pending:    {label:'待機中',    color:'#475569', bg:'rgba(71,85,105,0.1)'},
+    failed:     {label:'失敗',      color:'#ef4444', bg:'rgba(239,68,68,0.1)'},
+  })[s]||{label:s, color:'#64748b', bg:'rgba(100,116,139,0.1)'}
+
+  const activeCount = docs.filter(d=>d.is_active&&d.status==='vectorized').length
+  const totalChunks = docs.filter(d=>d.is_active&&d.status==='vectorized').reduce((s,d)=>s+(d.chunks||0),0)
+
+  const TABS = [
+    {id:'docs',    label:'RAGデータ管理', icon:'db'},
+    {id:'vectors', label:'ベクトル可視化', icon:'layers'},
+    {id:'search',  label:'検索テスト',    icon:'search'},
+  ]
+
+  return (
+    <div className="page-enter" style={{height:'100vh',overflowY:'auto',paddingTop:60}}>
+      <div style={{maxWidth:960,margin:'0 auto',padding:'36px 24px 80px'}}>
+
+        {/* Header */}
+        <div style={{marginBottom:28}}>
+          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:6}}>
+            <div style={{width:34,height:34,borderRadius:10,background:'rgba(37,99,235,0.12)',display:'flex',alignItems:'center',justifyContent:'center',color:'#3b82f6'}}>
+              <Icon name="sparkle" size={17}/>
+            </div>
+            <h1 style={{fontSize:22,fontWeight:800,color:C.textPrimary,letterSpacing:'-0.02em'}}>学習管理</h1>
+          </div>
+          <p style={{fontSize:13,color:C.textMuted}}>RAGデータの管理・ON/OFF切り替え、ベクトル可視化、検索テストができます</p>
+        </div>
+
+        {/* Stats */}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:28}}>
+          {[
+            {label:'全ドキュメント',  value:String(docs.length),      sub:`${docs.filter(d=>d.status==='vectorized').length} 完了`, color:'#3b82f6'},
+            {label:'RAG有効',         value:String(activeCount),       sub:'ベクトル検索対象', color:'#10b981'},
+            {label:'総チャンク数',    value:String(totalChunks),       sub:'有効ドキュメントのみ', color:'#8b5cf6'},
+            {label:'クラスター数',    value:'5',                        sub:CLUSTERS.map(c=>c.label).join('・'), color:'#f59e0b'},
+          ].map(st=>(
+            <div key={st.label} style={{padding:'16px 18px',borderRadius:14,background:C.card,border:`1px solid ${C.border}`}}>
+              <div style={{fontSize:10,color:C.textMuted,marginBottom:5,textTransform:'uppercase',letterSpacing:'0.06em'}}>{st.label}</div>
+              <div style={{fontSize:24,fontWeight:800,color:st.color,lineHeight:1}}>{st.value}</div>
+              <div style={{fontSize:11,color:'#334155',marginTop:4}}>{st.sub}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Tabs */}
+        <div style={{display:'flex',gap:3,marginBottom:22,padding:4,background:'rgba(255,255,255,0.02)',borderRadius:10,width:'fit-content',border:`1px solid ${C.border}`}}>
+          {TABS.map(t=>(
+            <button key={t.id} onClick={()=>setTab(t.id)} style={{display:'flex',alignItems:'center',gap:6,padding:'7px 16px',borderRadius:7,fontSize:13,fontWeight:500,transition:'all 0.2s',background:tab===t.id?'rgba(37,99,235,0.14)':'transparent',color:tab===t.id?'#60a5fa':C.textMuted,border:tab===t.id?'1px solid rgba(37,99,235,0.22)':'1px solid transparent'}}>
+              <Icon name={t.icon} size={13}/>{t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── DOCS TAB ── */}
+        {tab==='docs'&&(
+          <div>
+            {/* URL取り込みバー */}
+            <div style={{marginBottom:14}}>
+              {!showUrlForm ? (
+                <div style={{display:'flex',gap:8}}>
+                  <button onClick={()=>setShowUrlForm(true)} style={{display:'flex',alignItems:'center',gap:7,padding:'9px 16px',borderRadius:10,fontSize:13,fontWeight:600,background:'rgba(37,99,235,0.07)',border:'1px solid rgba(37,99,235,0.22)',color:'#60a5fa',transition:'all 0.2s'}}
+                    onMouseEnter={e=>e.currentTarget.style.background='rgba(37,99,235,0.14)'}
+                    onMouseLeave={e=>e.currentTarget.style.background='rgba(37,99,235,0.07)'}>
+                    <Icon name="link" size={14}/>URLからドキュメントを取り込む
+                  </button>
+                </div>
+              ):(
+                <div className="panel-slide" style={{padding:16,borderRadius:14,background:'rgba(37,99,235,0.04)',border:'1px solid rgba(37,99,235,0.2)'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
+                    <Icon name="link" size={14} style={{color:'#60a5fa'}}/>
+                    <span style={{fontSize:13,fontWeight:700,color:'#60a5fa'}}>URLからドキュメントを取り込む</span>
+                    <button onClick={()=>setShowUrlForm(false)} style={{marginLeft:'auto',color:C.textMuted,padding:3}}>
+                      <Icon name="xmark" size={14}/>
+                    </button>
+                  </div>
+                  <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                    <input value={urlTitle} onChange={e=>setUrlTitle(e.target.value)} placeholder="ドキュメント名（例: 嵐山観光ガイド 2026）"
+                      style={{width:'100%',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:9,padding:'10px 14px',color:C.textPrimary,fontSize:13,outline:'none'}}/>
+                    <div style={{display:'flex',gap:8}}>
+                      <input value={urlInput} onChange={e=>setUrlInput(e.target.value)} placeholder="https://travel.example.com/arashiyama"
+                        onKeyDown={e=>e.key==='Enter'&&addUrl()}
+                        style={{flex:1,background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,borderRadius:9,padding:'10px 14px',color:C.textPrimary,fontSize:13,outline:'none'}}/>
+                      <button onClick={addUrl} disabled={urlLoading||!urlInput.trim()||!urlTitle.trim()} style={{padding:'0 18px',borderRadius:9,background:C.accent,color:'#fff',fontSize:13,fontWeight:700,boxShadow:`0 0 12px ${C.accentGlow}`,opacity:(urlLoading||!urlInput.trim()||!urlTitle.trim())?0.5:1}}>
+                        {urlLoading?'取り込み中...':'取り込む'}
+                      </button>
+                    </div>
+                    <div style={{fontSize:11,color:C.textMuted}}>LangChain WebBaseLoaderでHTMLを取得・テキスト抽出 → ChromaDBにベクトル保存</div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* File drop zone */}
+            <div style={{border:'2px dashed rgba(37,99,235,0.22)',borderRadius:14,padding:'22px 24px',textAlign:'center',marginBottom:14,background:'rgba(37,99,235,0.02)',cursor:'pointer',transition:'all 0.2s'}}
+              onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(37,99,235,0.45)';e.currentTarget.style.background='rgba(37,99,235,0.04)'}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(37,99,235,0.22)';e.currentTarget.style.background='rgba(37,99,235,0.02)'}}>
+              <div style={{width:38,height:38,borderRadius:10,background:'rgba(37,99,235,0.1)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 8px',color:'#3b82f6'}}>
+                <Icon name="upload" size={17}/>
+              </div>
+              <div style={{fontWeight:600,color:C.textPrimary,marginBottom:2,fontSize:13}}>ファイルをドロップ、またはクリックして選択</div>
+              <div style={{fontSize:12,color:C.textMuted}}>PDF, TXT, MD — 最大 10MB</div>
+            </div>
+
+            {/* 凡例 */}
+            <div style={{display:'flex',alignItems:'center',gap:16,marginBottom:10,padding:'0 2px'}}>
+              <div style={{fontSize:11,color:C.textMuted,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.05em'}}>RAG ON/OFF で検索対象を制御</div>
+              <div style={{flex:1,height:1,background:C.border}}/>
+              <div style={{display:'flex',gap:10}}>
+                {['chat','upload','manual'].map(s=><SourceBadge key={s} source={s}/>)}
+              </div>
+            </div>
+
+            {/* Doc list */}
+            <div style={{display:'flex',flexDirection:'column',gap:6}}>
+              {docs.map(doc=>{
+                const si=statusInfo(doc.status)
+                return (
+                  <div key={doc.id} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',borderRadius:12,background:C.card,border:`1px solid ${doc.is_active?'rgba(255,255,255,0.09)':C.border}`,transition:'all 0.2s',opacity:doc.is_active?1:0.55}}
+                    onMouseEnter={e=>e.currentTarget.style.borderColor=doc.is_active?'rgba(255,255,255,0.16)':C.borderHover}
+                    onMouseLeave={e=>e.currentTarget.style.borderColor=doc.is_active?'rgba(255,255,255,0.09)':C.border}>
+                    {/* Toggle */}
+                    <Toggle on={doc.is_active} onChange={()=>toggleDoc(doc.id)}/>
+                    {/* Icon */}
+                    <div style={{color:doc.is_active?'#3b82f6':'#334155'}}><Icon name={doc.source==='chat'?'msg':'file'} size={16}/></div>
+                    {/* Info */}
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:2}}>
+                        <span style={{fontSize:13,fontWeight:500,color:doc.is_active?C.textPrimary:C.textMuted,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{doc.title}</span>
+                        <SourceBadge source={doc.source}/>
+                      </div>
+                      <div style={{fontSize:11,color:C.textMuted}}>
+                        {doc.url&&<span style={{color:'#3b82f6',marginRight:6}}><Icon name="link" size={10} style={{display:'inline',verticalAlign:'middle'}}/> URL</span>}
+                        {doc.size} · {doc.date}
+                        {doc.chunks&&<span style={{marginLeft:6}}>{doc.chunks} chunks</span>}
+                      </div>
+                    </div>
+                    {/* Status */}
+                    <div style={{fontSize:11,fontWeight:600,padding:'3px 9px',borderRadius:20,color:si.color,background:si.bg,flexShrink:0}}>
+                      {si.label==='処理中'&&<span className="spin" style={{display:'inline-block',marginRight:4,width:8,height:8,border:'1.5px solid currentColor',borderTopColor:'transparent',borderRadius:'50%'}}/>}
+                      {si.label}
+                    </div>
+                    {/* Delete */}
+                    <button onClick={()=>deleteDoc(doc.id)} style={{color:'#2d3748',padding:4,borderRadius:6,transition:'color 0.15s',flexShrink:0}}
+                      onMouseEnter={e=>e.currentTarget.style.color='#f87171'} onMouseLeave={e=>e.currentTarget.style.color='#2d3748'}>
+                      <Icon name="trash" size={14}/>
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* RAG filter hint */}
+            <div style={{marginTop:14,padding:'12px 16px',borderRadius:10,background:'rgba(37,99,235,0.04)',border:'1px solid rgba(37,99,235,0.12)',display:'flex',gap:10,alignItems:'flex-start'}}>
+              <Icon name="info" size={14} style={{color:'#3b82f6',flexShrink:0,marginTop:1}}/>
+              <div style={{fontSize:12,color:C.textSec,lineHeight:1.65}}>
+                RAGをONにしたドキュメントのみがChromaDB検索の対象になります。<br/>
+                <code style={{fontSize:11,background:'rgba(255,255,255,0.06)',padding:'1px 5px',borderRadius:4,color:'#a5b4fc'}}>is_active=True</code> のドキュメントIDをフィルタとしてChromaDBに渡します。
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── VECTORS TAB ── */}
+        {tab==='vectors'&&(
+          <div style={{display:'grid',gridTemplateColumns:'1fr 220px',gap:18}}>
+            <div style={{border:`1px solid ${C.border}`,borderRadius:16,background:'rgba(255,255,255,0.01)',padding:22}}>
+              <div style={{fontSize:12,fontWeight:600,color:C.textMuted,marginBottom:14,textTransform:'uppercase',letterSpacing:'0.05em'}}>ベクトル空間 — t-SNE 2D投影</div>
+              <svg width="100%" viewBox="0 0 380 280" style={{display:'block'}}>
+                {[0,1,2,3,4,5].map(i=><line key={'h'+i} x1={0} y1={i*47} x2={380} y2={i*47} stroke="rgba(255,255,255,0.035)" strokeWidth={1}/>)}
+                {[0,1,2,3,4,5,6].map(i=><line key={'v'+i} x1={i*54} y1={0} x2={i*54} y2={280} stroke="rgba(255,255,255,0.035)" strokeWidth={1}/>)}
+                {CLUSTERS.map(cl=>(
+                  <ellipse key={cl.label} cx={cl.cx} cy={cl.cy} rx={34} ry={27}
+                    fill={cl.color} fillOpacity={0.06} stroke={cl.color} strokeOpacity={0.18} strokeWidth={1}/>
+                ))}
+                {VPOINTS.map((pt,i)=>(
+                  <circle key={i} cx={pt.x} cy={pt.y} r={hoverPt===i?7:4.5}
+                    fill={pt.color} fillOpacity={0.88} stroke="#0a0a0a" strokeWidth={1}
+                    style={{cursor:'pointer',transition:'r 0.1s'}}
+                    onMouseEnter={()=>setHoverPt(i)} onMouseLeave={()=>setHoverPt(null)}/>
+                ))}
+                {CLUSTERS.map(cl=>(
+                  <text key={cl.label} x={cl.cx} y={cl.cy-38} textAnchor="middle"
+                    fill={cl.color} fontSize={11} fontWeight={700} fontFamily="DM Sans,sans-serif">{cl.label}</text>
+                ))}
+                {hoverPt!==null&&(()=>{
+                  const pt=VPOINTS[hoverPt]
+                  return (
+                    <g>
+                      <rect x={pt.x+12} y={pt.y-22} width={50} height={18} rx={4} fill="#1e293b" stroke="rgba(255,255,255,0.1)" strokeWidth={1}/>
+                      <text x={pt.x+37} y={pt.y-9} textAnchor="middle" fill="#e2e8f0" fontSize={10} fontFamily="DM Sans,sans-serif">{pt.label}</text>
+                    </g>
+                  )
+                })()}
+              </svg>
+            </div>
+            <div>
+              <div style={{fontSize:12,fontWeight:600,color:C.textMuted,marginBottom:12,textTransform:'uppercase',letterSpacing:'0.05em'}}>クラスター</div>
+              {CLUSTERS.map(cl=>(
+                <div key={cl.label} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 13px',borderRadius:10,border:`1px solid ${C.border}`,background:C.card,marginBottom:7}}>
+                  <div style={{width:9,height:9,borderRadius:'50%',background:cl.color,flexShrink:0,boxShadow:`0 0 6px ${cl.color}`}}/>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:13,fontWeight:600,color:C.textPrimary}}>{cl.label}</div>
+                    <div style={{fontSize:11,color:C.textMuted}}>{cl.n} vectors</div>
+                  </div>
+                </div>
+              ))}
+              <div style={{marginTop:14,padding:'12px 14px',borderRadius:10,background:'rgba(37,99,235,0.06)',border:'1px solid rgba(37,99,235,0.15)',fontSize:12,color:C.textSec,lineHeight:1.65}}>
+                <span style={{color:'#60a5fa',fontWeight:600}}>RAG検索</span>はクエリをベクトル化し、最も類似したクラスター内の文書を参照します。
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── SEARCH TAB ── */}
+        {tab==='search'&&(
+          <div>
+            {/* Active doc filter note */}
+            <div style={{marginBottom:14,padding:'10px 14px',borderRadius:10,background:'rgba(16,185,129,0.04)',border:'1px solid rgba(16,185,129,0.15)',display:'flex',gap:8,alignItems:'center'}}>
+              <Icon name="db" size={13} style={{color:'#10b981',flexShrink:0}}/>
+              <span style={{fontSize:12,color:'#6ee7b7'}}>
+                RAG ON のドキュメント <strong>{docs.filter(d=>d.is_active&&d.status==='vectorized').map(d=>d.title).join('・')}</strong> が検索対象です
+              </span>
+            </div>
+            <div style={{display:'flex',gap:10,marginBottom:24}}>
+              <div style={{flex:1,display:'flex',alignItems:'center',gap:10,background:'rgba(255,255,255,0.03)',border:`1px solid ${C.border}`,borderRadius:12,padding:'0 14px'}}>
+                <Icon name="search" size={15} style={{color:C.textMuted,flexShrink:0}}/>
+                <input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&doSearch()}
+                  placeholder="例: 京都の混雑を避けるコツは？"
+                  style={{flex:1,background:'transparent',border:'none',outline:'none',color:C.textPrimary,fontSize:14,padding:'13px 0'}}/>
+              </div>
+              <button onClick={doSearch} style={{padding:'0 22px',background:C.accent,color:'#fff',fontWeight:700,fontSize:14,borderRadius:12,boxShadow:`0 0 16px ${C.accentGlow}`}}>検索</button>
+            </div>
+            {searching&&(
+              <div style={{textAlign:'center',padding:'48px 0'}}>
+                <div style={{display:'flex',gap:6,justifyContent:'center',marginBottom:14}}>
+                  <div className="dot1" style={{width:8,height:8,borderRadius:'50%',background:'#3b82f6'}}/>
+                  <div className="dot2" style={{width:8,height:8,borderRadius:'50%',background:'#3b82f6'}}/>
+                  <div className="dot3" style={{width:8,height:8,borderRadius:'50%',background:'#3b82f6'}}/>
+                </div>
+                <div style={{fontSize:13,color:C.textMuted}}>ChromaDBをベクトル検索中...</div>
+              </div>
+            )}
+            {results&&!searching&&(
+              <div>
+                <div style={{fontSize:13,color:C.textMuted,marginBottom:16}}>
+                  <span style={{color:'#3b82f6',fontWeight:700}}>{results.length}</span> 件の類似チャンクが見つかりました
+                </div>
+                {results.map((r,i)=>(
+                  <div key={i} style={{padding:'16px 18px',borderRadius:14,marginBottom:10,background:C.card,border:`1px solid ${C.border}`,transition:'all 0.2s'}}
+                    onMouseEnter={e=>e.currentTarget.style.borderColor=C.borderHover}
+                    onMouseLeave={e=>e.currentTarget.style.borderColor=C.border}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+                      <div style={{display:'flex',alignItems:'center',gap:7}}>
+                        <Icon name="file" size={13} style={{color:'#3b82f6'}}/>
+                        <span style={{fontSize:12,fontWeight:600,color:'#60a5fa'}}>{r.doc}</span>
+                        <SourceBadge source={r.source}/>
+                      </div>
+                      <div style={{fontSize:11,fontWeight:700,padding:'3px 10px',borderRadius:20,background:'rgba(16,185,129,0.1)',color:'#10b981'}}>
+                        {(r.score*100).toFixed(0)}% 一致
+                      </div>
+                    </div>
+                    <p style={{fontSize:13,color:C.textSec,lineHeight:1.7}}>{r.chunk}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            {!searching&&!results&&(
+              <div style={{textAlign:'center',padding:'60px 24px',border:'1px dashed rgba(255,255,255,0.06)',borderRadius:16,color:'#2d3748'}}>
+                <Icon name="search" size={32} style={{margin:'0 auto 14px',opacity:0.3}}/>
+                <div style={{fontSize:14}}>クエリを入力してRAG検索をテストできます</div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* ─── APP ─────────────────────────────────────────────────── */
+function App() {
+  const [page,setPage] = useState('login')
+  const [user,setUser] = useState(null)
+  const handleLogin = u => { setUser(u); setPage('home') }
+  const handleNav   = p => { if(p==='login') setUser(null); setPage(p) }
+
+  if(page==='login') return <LoginPage onLogin={handleLogin}/>
+  return (
+    <div style={{height:'100vh',background:C.bg}}>
+      <Header page={page} onNav={handleNav} user={user}/>
+      {page==='home'     && <HomePage     onNav={handleNav}/>}
+      {page==='chat'     && <ChatPage/>}
+      {page==='learning' && <LearningPage/>}
+    </div>
+  )
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>)
+</script>
+</body>
+</html>
