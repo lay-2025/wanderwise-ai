@@ -53,15 +53,13 @@ def search_similar_chunks(
     metadatas = raw["metadatas"][0]
     distances = raw["distances"][0]
 
-    for chroma_id, content, meta, distance in zip(ids, documents, metadatas, distances):
+    for content, meta, distance in zip(documents, metadatas, distances):
         results.append(SearchResult(
-            chroma_id=chroma_id,
-            content=content,
-            similarity=round(1 - distance, 4),
-            category=meta.get("category"),
-            source=meta.get("source"),
-            session_id=meta.get("session_id"),
             document_id=meta.get("document_id"),
+            document_title=meta.get("document_title"),
+            source=meta.get("source"),
+            chunk=content,
+            score=round(1 - distance, 4),
         ))
 
     return SearchResponse(query=query, results=results, total=len(results))

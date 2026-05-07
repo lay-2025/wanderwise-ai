@@ -24,13 +24,11 @@ class VectorizeResponse(BaseModel):
 
 
 class SearchResult(BaseModel):
-    chroma_id: str
-    content: str
-    similarity: float
-    category: str | None
-    source: str | None
-    session_id: str | None
     document_id: str | None
+    document_title: str | None
+    source: str | None
+    chunk: str
+    score: float
 
 
 class SearchResponse(BaseModel):

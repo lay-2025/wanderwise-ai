@@ -11,13 +11,11 @@ from app.schemas.learning import SearchResponse, SearchResult
 LEARNING_SERVICE = "app.routers.learning"
 
 SAMPLE_RESULT = SearchResult(
-    chroma_id="508d1488-079c-49a9-bb29-0007368e9131",
-    content="旅行先: 嵐山（place）",
-    similarity=0.87,
-    category="destination",
-    source="chat",
-    session_id="a6e2c978-7c9f-43e8-8fea-82225849d903",
     document_id="7b66d212-76c2-4e24-b642-59efc69d9256",
+    document_title="嵐山観光ガイド",
+    source="chat",
+    chunk="旅行先: 嵐山（place）",
+    score=0.87,
 )
 
 
@@ -56,13 +54,11 @@ def test_resultsの各要素に必須フィールドが含まれる(client: Test
         res = client.get("/api/learning/search", params={"q": "京都のおすすめ観光地"})
     item = res.json()["results"][0]
 
-    assert "chroma_id" in item
-    assert "content" in item
-    assert "similarity" in item
-    assert "category" in item
-    assert "source" in item
-    assert "session_id" in item
     assert "document_id" in item
+    assert "document_title" in item
+    assert "source" in item
+    assert "chunk" in item
+    assert "score" in item
 
 
 def test_データなしの場合空のresultsが返る(client: TestClient):
