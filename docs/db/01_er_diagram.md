@@ -9,6 +9,7 @@
 |---|---|---|
 | 2026-04-22 | 1.0.0 | 初版作成（sessions / messages / travel_extractions / documents / chunks） |
 | 2026-04-27 | 1.1.0 | users テーブル追加・sessions.user_id / documents 出所カラム追加・データ所有区分セクション追加 |
+| 2026-05-07 | 1.2.0 | documents に is_active・url カラム追加 |
 
 ---
 
@@ -59,6 +60,8 @@ erDiagram
         text content
         varchar source
         varchar status
+        boolean is_active
+        varchar url "nullable"
         timestamp created_at
         timestamp updated_at
     }

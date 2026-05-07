@@ -47,13 +47,11 @@ GET /api/learning/search?q=旅行先&source=chat&n_results=10
   "query": "京都のおすすめ観光地",
   "results": [
     {
-      "chroma_id": "508d1488-079c-49a9-bb29-0007368e9131",
-      "content": "旅行先: 嵐山（place）",
-      "similarity": 0.87,
-      "category": "destination",
-      "source": "chat",
-      "session_id": "a6e2c978-7c9f-43e8-8fea-82225849d903",
-      "document_id": "7b66d212-76c2-4e24-b642-59efc69d9256"
+      "document_id": "7b66d212-76c2-4e24-b642-59efc69d9256",
+      "document_title": "嵐山観光ガイド",
+      "source": "upload",
+      "chunk": "旅行先: 嵐山（place）",
+      "score": 0.87
     }
   ],
   "total": 1
@@ -66,13 +64,11 @@ GET /api/learning/search?q=旅行先&source=chat&n_results=10
 |---|---|---|
 | `query` | string | リクエストで指定した検索クエリ |
 | `results` | array | 類似度の高い順に並んだチャンク一覧 |
-| `results[].chroma_id` | string | ChromaDB / chunks.chroma_id |
-| `results[].content` | string | チャンク本文 |
-| `results[].similarity` | float | 類似度スコア（0.0〜1.0、高いほど類似） |
-| `results[].category` | string \| null | カテゴリ |
-| `results[].source` | string \| null | データソース |
-| `results[].session_id` | string \| null | 元セッションID |
 | `results[].document_id` | string \| null | 元ドキュメントID |
+| `results[].document_title` | string \| null | ドキュメント名（upload/manual 由来時のみ） |
+| `results[].source` | string \| null | データソース（`chat` / `upload` / `manual`） |
+| `results[].chunk` | string | チャンク本文 |
+| `results[].score` | float | 類似度スコア（0.0〜1.0、高いほど類似） |
 | `total` | integer | 返却件数 |
 
 ### 200 OK（データなし）
@@ -107,18 +103,18 @@ Ollama / ChromaDB 接続エラー時。
    - source / category フィルタを適用（指定時）
    - コレクションが存在しない場合は空を返す
         ↓
-4. distance → similarity（1 - distance）に変換
+4. distance → score（1 - distance）に変換
         ↓
 5. SearchResponse を返す
 ```
 
 ---
 
-## similarity スコアについて
+## score について
 
-ChromaDB はコサイン距離（低いほど近い）を返すため、`similarity = 1 - distance` に変換して返す。
+ChromaDB はコサイン距離（低いほど近い）を返すため、`score = 1 - distance` に変換して返す。
 
-| similarity | 意味 |
+| score | 意味 |
 |---|---|
 | 1.0 | 完全一致 |
 | 0.8〜1.0 | 高い類似度 |
@@ -134,7 +130,7 @@ ChromaDB はコサイン距離（低いほど近い）を返すため、`similar
 | 1 | 正常系 | クエリを指定して検索 | 200・results が返る |
 | 2 | 正常系 | データなし | 200・`results=[]`, `total=0` |
 | 3 | 正常系 | レスポンスに必須フィールドが含まれる | query/results/total |
-| 4 | 正常系 | results の各要素に必須フィールドが含まれる | chroma_id/content/similarity 等 |
+| 4 | 正常系 | results の各要素に必須フィールドが含まれる | document_id/chunk/score 等 |
 | 5 | 正常系 | n_results が返却件数に反映される | — |
 | 6 | 正常系 | source フィルタがサービスに渡される | — |
 | 7 | 正常系 | category フィルタがサービスに渡される | — |
@@ -150,5 +146,6 @@ ChromaDB はコサイン距離（低いほど近い）を返すため、`similar
 
 | 日付 | バージョン | 変更内容 |
 |---|---|---|
+| 2026-05-07 | 1.2.0 | レスポンスフィールド名を変更（content→chunk, similarity→score）。document_title を追加、chroma_id/category/session_id を削除 |
 | 2026-04-28 | 1.1.0 | JWT Cookie 認証を必須化 |
 | 2026-04-23 | 1.0.0 | 初版作成 |

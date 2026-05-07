@@ -9,6 +9,7 @@
 |---|---|---|
 | 2026-04-22 | 1.0.0 | 初版作成（sessions / messages / travel_extractions / documents / chunks） |
 | 2026-04-27 | 1.1.0 | users テーブル追加・sessions.user_id 追加・documents に created_by_user_id / source_session_id 追加・ChromaDB メタデータ仕様追加 |
+| 2026-05-07 | 1.2.0 | documents に is_active・url カラム追加。ChromaDB メタデータに document_title 追加 |
 
 ---
 
@@ -104,6 +105,8 @@
 | `content` | `text` | NO | — | — | 本文全体 |
 | `source` | `varchar(50)` | NO | — | CHECK | データ出所 |
 | `status` | `varchar(50)` | NO | `'pending'` | CHECK | ベクトル化の進捗状態 |
+| `is_active` | `boolean` | NO | `true` | — | RAG検索対象とするか（ON/OFF） |
+| `url` | `varchar(2048)` | YES | — | — | 取り込み元URL（upload 時のみ） |
 | `created_at` | `timestamp` | NO | `NOW()` | — | 登録日時 |
 | `updated_at` | `timestamp` | NO | `NOW()` | — | 最終更新日時 |
 
@@ -149,10 +152,24 @@ pending → processing → vectorized
 | フィールド | 型 | 説明 |
 |---|---|---|
 | `document_id` | `str` | PostgreSQL の `documents.id` |
-| `chunk_index` | `int` | チャンク番号（0始まり） |
+| `document_title` | `str \| None` | ドキュメント名（upload/manual 由来時に付与） |
 | `source` | `str` | `'chat'` / `'upload'` / `'manual'` |
-| `created_by_user_id` | `str \| None` | 作成者ユーザーID |
-| `source_session_id` | `str \| None` | チャット由来セッションID |
+| `chunk_index` | `int` | チャンク番号（0始まり）※chat由来のみ |
+| `category` | `str \| None` | 旅行データカテゴリ（chat由来のみ） |
+| `created_by_user_id` | `str \| None` | 作成者ユーザーID（chat由来のみ） |
+| `source_session_id` | `str \| None` | チャット由来セッションID（chat由来のみ） |
+
+**source 別のメタデータ付与状況:**
+
+| フィールド | `chat` | `upload` / `manual` |
+|---|---|---|
+| `document_id` | ✅ | ✅ |
+| `document_title` | — | ✅ |
+| `source` | ✅ | ✅ |
+| `chunk_index` | ✅ | — |
+| `category` | ✅ | — |
+| `created_by_user_id` | ✅ | — |
+| `source_session_id` | ✅ | — |
 
 ---
 
