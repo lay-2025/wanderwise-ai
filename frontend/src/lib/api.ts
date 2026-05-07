@@ -1,3 +1,7 @@
+import type { TravelExtraction } from '@/types/extraction'
+
+export type { TravelExtraction }
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export interface User {
@@ -133,4 +137,126 @@ export function sendChat(message: string, sessionId: string): Promise<ChatRespon
     method: "POST",
     body: JSON.stringify({ message, session_id: sessionId }),
   });
+}
+
+// ---------------------------------------------------------------
+// 旅行データ抽出 (travel_extractions)
+// ---------------------------------------------------------------
+
+export interface ExtractionsResponse {
+  extractions: TravelExtraction[]
+  total: number
+}
+
+export function getExtractions(sessionId: string): Promise<ExtractionsResponse> {
+  return request<ExtractionsResponse>(`/api/data/travel?session_id=${sessionId}`)
+}
+
+// ---------------------------------------------------------------
+// 学習ドキュメント (documents)
+// ---------------------------------------------------------------
+
+export type DocumentSource = 'chat' | 'upload' | 'manual'
+export type DocumentStatus = 'pending' | 'processing' | 'vectorized' | 'failed'
+
+export interface Document {
+  id: string
+  title: string
+  source: DocumentSource
+  status: DocumentStatus
+  is_active: boolean
+  chunks?: number | null
+  size?: string
+  url?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface DocumentListResponse {
+  documents: Document[]
+  total: number
+}
+
+/** ドキュメント一覧取得 */
+export function getDocuments(): Promise<DocumentListResponse> {
+  return request<DocumentListResponse>('/api/documents')
+}
+
+/** ドキュメント削除 */
+export async function deleteDocument(id: string): Promise<void> {
+  const res = await fetch(`${API_URL}/api/documents/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  })
+  if (!res.ok) throw new Error(`${res.status} エラーが発生しました`)
+}
+
+/** RAG ON/OFF 切り替え */
+export function toggleDocument(id: string): Promise<Document> {
+  return request<Document>(`/api/documents/${id}/toggle`, { method: 'PATCH' })
+}
+
+/** URLからドキュメントを取り込む */
+export function uploadDocumentFromUrl(title: string, url: string): Promise<Document> {
+  return request<Document>('/api/documents/upload', {
+    method: 'POST',
+    body: JSON.stringify({ title, url }),
+  })
+}
+
+// ---------------------------------------------------------------
+// 学習・ベクトル検索 (learning)
+// ---------------------------------------------------------------
+
+export interface SearchResult {
+  document_id: string
+  document_title: string
+  source: DocumentSource
+  chunk: string
+  score: number
+}
+
+export interface SearchResponse {
+  results: SearchResult[]
+  total: number
+  query: string
+}
+
+export interface VisualizeResponse {
+  clusters: { label: string; count: number; color?: string }[]
+  points: { x: number; y: number; label: string; document_id: string }[]
+  total_vectors: number
+}
+
+export interface RagCompareResponse {
+  query: string
+  without_rag: string
+  with_rag: string
+  sources_used: string[]
+}
+
+/** RAG類似度検索 */
+export function searchDocuments(query: string): Promise<SearchResponse> {
+  return request<SearchResponse>(`/api/learning/search?q=${encodeURIComponent(query)}`)
+}
+
+/** ベクトルデータ可視化情報取得 */
+export function getVisualize(): Promise<VisualizeResponse> {
+  return request<VisualizeResponse>('/api/learning/visualize')
+}
+
+/** RAGあり・なし比較 */
+export function compareRag(query: string, sessionId: string): Promise<RagCompareResponse> {
+  return request<RagCompareResponse>('/api/chat', {
+    method: 'POST',
+    body: JSON.stringify({ message: query, session_id: sessionId, compare_mode: true }),
+  })
+}
+
+/** ドキュメントをベクトル化 */
+export function vectorizeDocument(documentId: string): Promise<{ task_id: string }> {
+  return request<{ task_id: string }>('/api/learning/vectorize', {
+    method: 'POST',
+    body: JSON.stringify({ document_id: documentId }),
+  })
 }
