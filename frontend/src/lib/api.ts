@@ -141,10 +141,10 @@ export function getHistory(sessionId: string, limit = 100, offset = 0): Promise<
   );
 }
 
-export function sendChat(message: string, sessionId: string): Promise<ChatResponse> {
+export function sendChat(message: string, sessionId: string, compareMode = false): Promise<ChatResponse> {
   return request<ChatResponse>("/api/chat", {
     method: "POST",
-    body: JSON.stringify({ message, session_id: sessionId }),
+    body: JSON.stringify({ message, session_id: sessionId, compare_mode: compareMode }),
   });
 }
 
