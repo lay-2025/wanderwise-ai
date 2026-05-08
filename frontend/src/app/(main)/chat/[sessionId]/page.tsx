@@ -1,14 +1,15 @@
 'use client'
 
 import { useState, useRef, useEffect, use } from 'react'
-import { Brain, Send } from 'lucide-react'
-import { getHistory, sendChat, ChatMessage } from '@/lib/api'
+import { Brain, Send, FileText, ChevronDown, ChevronUp } from 'lucide-react'
+import { getHistory, sendChat, ChatMessage, RagSource } from '@/lib/api'
 import { useSession } from '@/context/SessionContext'
 
 interface UIMessage {
   role: 'user' | 'assistant'
   content: string
   time: string
+  ragSources?: RagSource[]
 }
 
 function toUIMessage(msg: ChatMessage): UIMessage {
@@ -28,6 +29,39 @@ const WELCOME: UIMessage = {
   time: '',
 }
 
+function RagSourcesSection({
+  sources,
+  expanded,
+  onToggle,
+}: {
+  sources: RagSource[]
+  expanded: boolean
+  onToggle: () => void
+}) {
+  return (
+    <div className="mt-3 border-t border-white/5 pt-3">
+      <button
+        onClick={onToggle}
+        className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-200 transition-colors"
+      >
+        {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+        参照ドキュメント ({sources.length}件)
+      </button>
+      {expanded && (
+        <ul className="mt-2 space-y-1">
+          {sources.map((src, i) => (
+            <li key={i} className="flex items-center gap-2 text-xs text-slate-400">
+              <FileText className="h-3 w-3 flex-shrink-0 text-blue-400" />
+              <span className="truncate">{src.document_title ?? 'ドキュメント'}</span>
+              <span className="flex-shrink-0 text-blue-400">{Math.round(src.score * 100)}% 一致</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 export default function ChatSessionPage({
   params,
 }: {
@@ -40,10 +74,10 @@ export default function ChatSessionPage({
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [historyLoaded, setHistoryLoaded] = useState(false)
+  const [expandedSources, setExpandedSources] = useState<Set<number>>(new Set())
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // input が変わるたびに textarea の高さを内容に合わせて自動調整する
   useEffect(() => {
     const el = textareaRef.current
     if (!el) return
@@ -51,10 +85,10 @@ export default function ChatSessionPage({
     el.style.height = `${Math.min(el.scrollHeight, 200)}px`
   }, [input])
 
-  // セッション切り替え時に履歴を読み込む
   useEffect(() => {
     setHistoryLoaded(false)
     setMessages([WELCOME])
+    setExpandedSources(new Set())
 
     getHistory(sessionId)
       .then((data) => {
@@ -69,6 +103,15 @@ export default function ChatSessionPage({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  const toggleSource = (index: number) => {
+    setExpandedSources((prev) => {
+      const next = new Set(prev)
+      if (next.has(index)) next.delete(index)
+      else next.add(index)
+      return next
+    })
+  }
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return
@@ -91,9 +134,9 @@ export default function ChatSessionPage({
           role: 'assistant',
           content: data.response,
           time: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
+          ragSources: data.rag_sources.length > 0 ? data.rag_sources : undefined,
         },
       ])
-      // タイトル自動生成・updated_at 更新をサイドバーに反映
       loadSessions()
     } catch {
       setMessages((prev) => [
@@ -114,60 +157,67 @@ export default function ChatSessionPage({
       {/* メッセージエリア */}
       <div className="flex-1 overflow-y-auto py-6 mt-4">
         <div className="max-w-3xl mx-auto px-4 space-y-6">
-        {!historyLoaded ? (
-          <div className="flex justify-center pt-8">
-            <div className="flex gap-1.5">
-              <div className="h-2 w-2 animate-bounce rounded-full bg-blue-500 [animation-delay:-0.3s]" />
-              <div className="h-2 w-2 animate-bounce rounded-full bg-blue-500 [animation-delay:-0.15s]" />
-              <div className="h-2 w-2 animate-bounce rounded-full bg-blue-500" />
-            </div>
-          </div>
-        ) : (
-          messages.map((msg, index) => (
-            <div
-              key={index}
-              className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
-            >
-              {msg.role === 'assistant' && (
-                <div className="flex-shrink-0 mt-1">
-                  <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]">
-                    <Brain className="h-5 w-5" />
-                  </div>
-                </div>
-              )}
-              <div
-                className={`border rounded-2xl p-4 max-w-[80%] text-slate-200 ${
-                  msg.role === 'assistant'
-                    ? 'bg-[#121212] border-white/5 rounded-tl-sm'
-                    : 'bg-blue-600/10 border-blue-500/20 rounded-tr-sm'
-                }`}
-              >
-                <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-                {msg.time && (
-                  <div className="text-xs text-slate-500 mt-3">{msg.time}</div>
-                )}
-              </div>
-            </div>
-          ))
-        )}
-        {isLoading && (
-          <div className="flex gap-3">
-            <div className="flex-shrink-0 mt-1">
-              <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-white">
-                <Brain className="h-5 w-5" />
-              </div>
-            </div>
-            <div className="border rounded-2xl p-4 bg-[#121212] border-white/5 rounded-tl-sm">
-              <div className="flex gap-1">
+          {!historyLoaded ? (
+            <div className="flex justify-center pt-8">
+              <div className="flex gap-1.5">
                 <div className="h-2 w-2 animate-bounce rounded-full bg-blue-500 [animation-delay:-0.3s]" />
                 <div className="h-2 w-2 animate-bounce rounded-full bg-blue-500 [animation-delay:-0.15s]" />
                 <div className="h-2 w-2 animate-bounce rounded-full bg-blue-500" />
               </div>
             </div>
-          </div>
-        )}
-        <div ref={bottomRef} />
-        </div>{/* /max-w-3xl */}
+          ) : (
+            messages.map((msg, index) => (
+              <div
+                key={index}
+                className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
+              >
+                {msg.role === 'assistant' && (
+                  <div className="flex-shrink-0 mt-1">
+                    <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]">
+                      <Brain className="h-5 w-5" />
+                    </div>
+                  </div>
+                )}
+                <div
+                  className={`border rounded-2xl p-4 max-w-[80%] text-slate-200 ${
+                    msg.role === 'assistant'
+                      ? 'bg-[#121212] border-white/5 rounded-tl-sm'
+                      : 'bg-blue-600/10 border-blue-500/20 rounded-tr-sm'
+                  }`}
+                >
+                  <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                  {msg.ragSources && msg.ragSources.length > 0 && (
+                    <RagSourcesSection
+                      sources={msg.ragSources}
+                      expanded={expandedSources.has(index)}
+                      onToggle={() => toggleSource(index)}
+                    />
+                  )}
+                  {msg.time && (
+                    <div className="text-xs text-slate-500 mt-3">{msg.time}</div>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+          {isLoading && (
+            <div className="flex gap-3">
+              <div className="flex-shrink-0 mt-1">
+                <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-white">
+                  <Brain className="h-5 w-5" />
+                </div>
+              </div>
+              <div className="border rounded-2xl p-4 bg-[#121212] border-white/5 rounded-tl-sm">
+                <div className="flex gap-1">
+                  <div className="h-2 w-2 animate-bounce rounded-full bg-blue-500 [animation-delay:-0.3s]" />
+                  <div className="h-2 w-2 animate-bounce rounded-full bg-blue-500 [animation-delay:-0.15s]" />
+                  <div className="h-2 w-2 animate-bounce rounded-full bg-blue-500" />
+                </div>
+              </div>
+            </div>
+          )}
+          <div ref={bottomRef} />
+        </div>
       </div>
 
       {/* 入力エリア */}

@@ -120,10 +120,19 @@ export interface HistoryResponse {
   offset: number;
 }
 
+export interface RagSource {
+  document_id: string | null;
+  document_title: string | null;
+  chunk: string;
+  score: number;
+}
+
 export interface ChatResponse {
   response: string;
   session_id: string;
   extractions: unknown[];
+  rag_sources: RagSource[];
+  response_without_rag: string | null;
 }
 
 export function getHistory(sessionId: string, limit = 100, offset = 0): Promise<HistoryResponse> {
