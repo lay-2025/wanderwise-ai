@@ -50,6 +50,17 @@ _RAG_CONTEXT_SECTION = """
 
 上記の参考情報があれば活用して、より具体的に回答してください。"""
 
+# --- RAG 検索パラメータ ---
+# 類似度スコアの下限（0.0〜1.0）。低くすると広く拾う、高くすると精度重視（デフォルト: 0.6）
+RAG_MIN_SIMILARITY: float = 0.5
+# 1回の検索で参照するチャンクの上限件数
+RAG_N_RESULTS: int = 5
+
+# --- LLM パラメータ ---
+# 回答のランダム性（0.0=毎回同じ回答・決定論的、1.0以上=創造的だが不安定、デフォルト：0.7）
+# RAGあり・RAGなし両方に適用される
+LLM_TEMPERATURE: float = 0.0
+
 
 @router.post("", response_model=ChatResponse)
 def chat(request: ChatRequest, db: DbDep, current_user: CurrentUserDep) -> ChatResponse:
@@ -79,13 +90,15 @@ def chat(request: ChatRequest, db: DbDep, current_user: CurrentUserDep) -> ChatR
             chroma_port=settings.chroma_server_http_port,
             ollama_url=settings.ollama_base_url,
             active_document_ids=active_ids,
+            n_results=RAG_N_RESULTS,
+            min_similarity=RAG_MIN_SIMILARITY,
         )
         system_prompt = BASE_SYSTEM_PROMPT
         if rag_context:
             system_prompt += _RAG_CONTEXT_SECTION.format(context=rag_context)
 
         # LLMで返答生成（sync）
-        llm = ChatOllama(model="qwen2.5:3b", base_url=settings.ollama_base_url)
+        llm = ChatOllama(model="qwen2.5:3b", base_url=settings.ollama_base_url, temperature=LLM_TEMPERATURE)
         result = llm.invoke([
             SystemMessage(content=system_prompt),
             HumanMessage(content=request.message),
@@ -114,7 +127,7 @@ def chat(request: ChatRequest, db: DbDep, current_user: CurrentUserDep) -> ChatR
         # 比較モード: RAGなしで追加呼び出し（DB保存なし）
         response_without_rag = None
         if request.compare_mode:
-            llm_no_rag = ChatOllama(model="qwen2.5:3b", base_url=settings.ollama_base_url)
+            llm_no_rag = ChatOllama(model="qwen2.5:3b", base_url=settings.ollama_base_url, temperature=LLM_TEMPERATURE)
             result_no_rag = llm_no_rag.invoke([
                 SystemMessage(content=BASE_SYSTEM_PROMPT),
                 HumanMessage(content=request.message),
