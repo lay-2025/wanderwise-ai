@@ -10,7 +10,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user, CurrentUserDep
 from app.models import TravelExtraction
 from app.schemas.chat import (
-    ChatRequest, ChatResponse, ExtractionResult,
+    ChatRequest, ChatResponse, ExtractionResult, RagSource,
     HistoryResponse, MessageResponse,
     SessionItem, SessionListResponse, SessionResponse, SessionUpdateRequest,
 )
@@ -25,6 +25,7 @@ from app.services.chat_service import (
     delete_session,
     touch_session,
 )
+from app.models.document import Document
 from app.services.extraction_service import extract_travel_data
 from app.services.rag_service import build_rag_context
 
@@ -62,12 +63,22 @@ def chat(request: ChatRequest, db: DbDep, current_user: CurrentUserDep) -> ChatR
         # 初回メッセージからセッションタイトルを自動生成
         set_session_title_if_empty(db, session, request.message)
 
-        # RAGコンテキストを取得（ChromaDBが空・接続不可の場合は None）
-        rag_context = build_rag_context(
+        # is_active=True かつ vectorized のドキュメントIDを取得
+        active_ids = [
+            str(row.id)
+            for row in db.query(Document.id).filter(
+                Document.is_active == True,
+                Document.status == "vectorized",
+            ).all()
+        ]
+
+        # RAGコンテキストを取得（アクティブドキュメントなし・接続不可の場合は None）
+        rag_context, rag_sources = build_rag_context(
             query=request.message,
             chroma_host=settings.chroma_server_host,
             chroma_port=settings.chroma_server_http_port,
             ollama_url=settings.ollama_base_url,
+            active_document_ids=active_ids,
         )
         system_prompt = BASE_SYSTEM_PROMPT
         if rag_context:
@@ -104,6 +115,7 @@ def chat(request: ChatRequest, db: DbDep, current_user: CurrentUserDep) -> ChatR
             response=assistant_content,
             session_id=session.id,
             extractions=saved_extractions,
+            rag_sources=[RagSource(**vars(s)) for s in rag_sources],
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

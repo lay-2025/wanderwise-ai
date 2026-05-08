@@ -28,7 +28,7 @@ def mock_services(mock_db):
         patch(f"{CHAT_SERVICE}.set_session_title_if_empty") as mock_title,
         patch(f"{CHAT_SERVICE}.save_message", return_value=message) as mock_save,
         patch(f"{CHAT_SERVICE}.extract_travel_data", return_value=[]) as mock_extract,
-        patch(f"{CHAT_SERVICE}.build_rag_context", return_value=None) as mock_rag,
+        patch(f"{CHAT_SERVICE}.build_rag_context", return_value=(None, [])) as mock_rag,
         patch(f"{CHAT_SERVICE}.ChatOllama") as mock_llm,
     ):
         mock_llm_instance = MagicMock()
@@ -64,6 +64,8 @@ def test_レスポンスに必須フィールドが含まれる(client: TestClie
     assert "response" in data
     assert "session_id" in data
     assert "extractions" in data
+    assert "rag_sources" in data
+    assert "response_without_rag" in data
 
 
 def test_レスポンスのsession_idはUUID形式(client: TestClient, mock_services):
@@ -183,15 +185,40 @@ def test_LLMがエラーを返した場合は500を返す(client: TestClient, mo
 # ---------------------------------------------------------------
 
 def test_RAGコンテキストがある場合も200が返る(client: TestClient, mock_services):
-    mock_services["mock_rag"].return_value = "- 旅行先: 嵐山（place）\n- 旅行のコツ: 朝一番がおすすめ"
+    from app.services.rag_service import RagSource
+    source = RagSource(
+        document_id="doc-1",
+        document_title="嵐山観光ガイド",
+        chunk="旅行先: 嵐山（place）",
+        score=0.87,
+    )
+    mock_services["mock_rag"].return_value = ("- 旅行先: 嵐山（place）", [source])
 
     res = client.post("/api/chat", json={"message": "嵐山のおすすめは？"})
 
     assert res.status_code == 200
 
 
+def test_RAGコンテキストがある場合rag_sourcesがレスポンスに含まれる(client: TestClient, mock_services):
+    from app.services.rag_service import RagSource
+    source = RagSource(
+        document_id="doc-1",
+        document_title="嵐山観光ガイド",
+        chunk="旅行先: 嵐山（place）",
+        score=0.87,
+    )
+    mock_services["mock_rag"].return_value = ("- 旅行先: 嵐山（place）", [source])
+
+    res = client.post("/api/chat", json={"message": "嵐山のおすすめは？"})
+    data = res.json()
+
+    assert len(data["rag_sources"]) == 1
+    assert data["rag_sources"][0]["document_title"] == "嵐山観光ガイド"
+    assert data["rag_sources"][0]["score"] == 0.87
+
+
 def test_RAGコンテキストがない場合も200が返る(client: TestClient, mock_services):
-    mock_services["mock_rag"].return_value = None
+    mock_services["mock_rag"].return_value = (None, [])
 
     res = client.post("/api/chat", json={"message": "旅行の相談です"})
 

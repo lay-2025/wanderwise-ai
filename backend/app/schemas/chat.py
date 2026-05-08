@@ -14,10 +14,19 @@ class ExtractionResult(BaseModel):
     confidence: float
 
 
+class RagSource(BaseModel):
+    document_id: str | None
+    document_title: str | None
+    chunk: str
+    score: float
+
+
 class ChatResponse(BaseModel):
     response: str
     session_id: uuid.UUID
     extractions: list[ExtractionResult]
+    rag_sources: list[RagSource] = []
+    response_without_rag: str | None = None
 
 
 class MessageResponse(BaseModel):
