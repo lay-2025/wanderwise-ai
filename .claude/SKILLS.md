@@ -107,14 +107,42 @@
 
 ### `rag-implementation`
 - **発動**: `/rag-implementation` で明示指定
-- **概要**: ChromaDB + LangChain を使った RAG パイプラインの実装パターンガイド
+- **概要**: ChromaDB・Pinecone・Qdrant など主要ベクターDB に対応した RAG パイプライン実装ガイド（7,800 installs）
 - **カバー範囲**:
-  - ドキュメントのチャンク分割戦略
+  - ドキュメントのチャンク分割戦略（再帰的分割・トークンベース・セマンティック）
   - Embedding 生成と ChromaDB への保存
-  - 類似度検索とコンテキスト付与
+  - 高度な検索パターン（ハイブリッド検索・マルチクエリ・HyDE・MMR）
+  - クロスエンコーダーによるリランキング
   - RAG を組み込んだチャットエンドポイントの設計
 - **インストール先**: プロジェクトローカル（`.agents/skills/rag-implementation`）
-- **出典**: [davila7/claude-code-templates](https://skills.sh/davila7/claude-code-templates/rag-implementation)
+- **出典**: [wshobson/agents](https://skills.sh/wshobson/agents/rag-implementation)
+
+---
+
+### `embedding-strategies`
+- **発動**: `/embedding-strategies` で明示指定
+- **概要**: ベクトル検索アプリケーション向けの埋め込みモデル選択と最適化ガイド（6,300 installs）
+- **カバー範囲**:
+  - 埋め込みモデルの選定と比較（Voyage AI・OpenAI・BGE・ローカルモデル）
+  - チャンキング戦略（トークンベース・文ベース・セマンティック）
+  - Matryoshka 次元削減・バッチ処理最適化
+  - 評価指標（Precision@K・Recall@K・MRR・NDCG@K）
+- **インストール先**: プロジェクトローカル（`.agents/skills/embedding-strategies`）
+- **出典**: [wshobson/agents](https://skills.sh/wshobson/agents/embedding-strategies)
+
+---
+
+### `hybrid-search-implementation`
+- **発動**: `/hybrid-search-implementation` で明示指定
+- **概要**: ベクトル検索とキーワード検索を組み合わせたハイブリッド検索の実装ガイド（5,900 installs）
+- **カバー範囲**:
+  - RRF（Reciprocal Rank Fusion）による結果統合（k=60）
+  - 線形結合による重み調整（alpha パラメータ）
+  - クロスエンコーダーによるリランキング（50件取得→絞り込み）
+  - データタイプ別の Dense/Sparse 重みガイドライン
+  - MRR・Recall@5・Precision@5 による評価
+- **インストール先**: プロジェクトローカル（`.agents/skills/hybrid-search-implementation`）
+- **出典**: [wshobson/agents](https://skills.sh/wshobson/agents/hybrid-search-implementation)
 
 ---
 
@@ -138,7 +166,9 @@
 | `fastapi` | FastAPI コード作業時 | `/fastapi` | バックエンド実装 | プロジェクト |
 | `architecture-patterns` | アーキテクチャ設計・リファクタリング時 | `/architecture-patterns` | 設計・リファクタリング | プロジェクト |
 | `pytest-coverage` | なし | `/pytest-coverage` | テスト・カバレッジ | プロジェクト |
-| `rag-implementation` | なし | `/rag-implementation` | RAG パイプライン実装 | プロジェクト |
+| `rag-implementation` | なし | `/rag-implementation` | RAG パイプライン実装（網羅的） | プロジェクト |
+| `embedding-strategies` | なし | `/embedding-strategies` | 埋め込みモデル選定・チャンキング最適化 | プロジェクト |
+| `hybrid-search-implementation` | なし | `/hybrid-search-implementation` | ハイブリッド検索・リランキング実装 | プロジェクト |
 | `find-skills` | なし | `/find-skills` | スキル検索 | プロジェクト |
 
 ---
