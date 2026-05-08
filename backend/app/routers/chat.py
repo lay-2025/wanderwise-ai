@@ -111,11 +111,22 @@ def chat(request: ChatRequest, db: DbDep, current_user: CurrentUserDep) -> ChatR
         # セッションの最終更新日時を更新（サイドバーの並び順に反映）
         touch_session(db, session)
 
+        # 比較モード: RAGなしで追加呼び出し（DB保存なし）
+        response_without_rag = None
+        if request.compare_mode:
+            llm_no_rag = ChatOllama(model="qwen2.5:3b", base_url=settings.ollama_base_url)
+            result_no_rag = llm_no_rag.invoke([
+                SystemMessage(content=BASE_SYSTEM_PROMPT),
+                HumanMessage(content=request.message),
+            ])
+            response_without_rag = result_no_rag.content
+
         return ChatResponse(
             response=assistant_content,
             session_id=session.id,
             extractions=saved_extractions,
             rag_sources=[RagSource(**vars(s)) for s in rag_sources],
+            response_without_rag=response_without_rag,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

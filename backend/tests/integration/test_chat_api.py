@@ -223,3 +223,39 @@ def test_RAGコンテキストがない場合も200が返る(client: TestClient,
     res = client.post("/api/chat", json={"message": "旅行の相談です"})
 
     assert res.status_code == 200
+
+
+# ---------------------------------------------------------------
+# 比較モード
+# ---------------------------------------------------------------
+
+def test_比較モードOFFではresponse_without_ragはnull(client: TestClient, mock_services):
+    res = client.post("/api/chat", json={"message": "旅行の相談です"})
+    data = res.json()
+
+    assert data["response_without_rag"] is None
+
+
+def test_比較モードONで200が返る(client: TestClient, mock_services):
+    res = client.post("/api/chat", json={"message": "旅行の相談です", "compare_mode": True})
+
+    assert res.status_code == 200
+
+
+def test_比較モードONではresponse_without_ragに値が入る(client: TestClient, mock_services):
+    mock_services["mock_llm"].return_value.invoke.return_value.content = "RAGなし回答です。"
+
+    res = client.post("/api/chat", json={"message": "旅行の相談です", "compare_mode": True})
+    data = res.json()
+
+    assert data["response_without_rag"] == "RAGなし回答です。"
+
+
+def test_比較モードONでもDBへの保存は通常通り行われる(client: TestClient, mock_services):
+    client.post("/api/chat", json={"message": "京都旅行の相談", "compare_mode": True})
+
+    assert mock_services["mock_save"].call_count == 2
+    calls = mock_services["mock_save"].call_args_list
+    roles = [call.args[2] for call in calls]
+    assert "user" in roles
+    assert "assistant" in roles
